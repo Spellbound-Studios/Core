@@ -18,6 +18,7 @@ namespace Spellbound.Core.Logging {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Initialize() {
+            UnityLogCapture.Stop();
             Log.ClearSinks();
 
             var config = Resources.Load<LogConfig>(ConfigResourcePath);
@@ -28,6 +29,9 @@ namespace Spellbound.Core.Logging {
             }
 
             RegisterEnabledSinks(config);
+
+            if (config.captureUnityLog)
+                UnityLogCapture.Start(config);
         }
 
 #if UNITY_EDITOR
@@ -38,8 +42,11 @@ namespace Spellbound.Core.Logging {
         }
 
         private static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state) {
-            if (state == UnityEditor.PlayModeStateChange.EnteredEditMode)
-                Log.ClearSinks();
+            if (state != UnityEditor.PlayModeStateChange.EnteredEditMode)
+                return;
+
+            UnityLogCapture.Stop();
+            Log.ClearSinks();
         }
 #endif
 
@@ -87,4 +94,4 @@ namespace Spellbound.Core.Logging {
             }
         }
     }
-}
+}

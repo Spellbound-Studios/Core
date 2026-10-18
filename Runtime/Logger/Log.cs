@@ -15,6 +15,11 @@ namespace Spellbound.Core.Logging {
 
         private static volatile RegisteredSink[] _sinks = System.Array.Empty<RegisteredSink>();
 
+        [System.ThreadStatic]
+        private static int _emitDepth;
+
+        internal static bool IsEmitting => _emitDepth > 0;
+
         public static void AddSink(ILogSink sink, LogConfig config, LogLevel filterLevel) {
             if (sink == null)
                 return;
@@ -166,14 +171,20 @@ namespace Spellbound.Core.Logging {
                 return;
 
             string source = null;
+            _emitDepth++;
 
-            for (var i = 0; i < sinks.Length; i++) {
-                if (level < sinks[i].FilterLevel)
-                    continue;
+            try {
+                for (var i = 0; i < sinks.Length; i++) {
+                    if (level < sinks[i].FilterLevel)
+                        continue;
 
-                source ??= Path.GetFileNameWithoutExtension(file);
-                sinks[i].Sink.Emit(level, source, message, member, line);
+                    source ??= Path.GetFileNameWithoutExtension(file);
+                    sinks[i].Sink.Emit(level, source, message, member, line);
+                }
+            }
+            finally {
+                _emitDepth--;
             }
         }
     }
-}
+}

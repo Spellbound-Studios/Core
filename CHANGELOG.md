@@ -1,3 +1,8 @@
+## [1.1.9] - 10/18/2026
+
+- `UnityLogCapture` routes `Debug.Log`, warnings, errors and exceptions through the Spellbound sinks, enabled per `LogConfig` with **Capture Unity Log**. Console output produced by a sink is never captured back.
+- `TallyingLogSink` keeps one entry per distinct message with a count and a cap on distinct entries; `Drain` returns `LogMessageTally` records and resets.
+
 ## [1.1.8] - 9/7/2026
 
 - `WeightedPool<T>` renamed to `WeightedTableAsset<T>`. It is the asset form of a `WeightedTable<T>`, and the old name collided with `ObjectPool`.
@@ -46,4 +51,4 @@
 ### First Release
 
 - Package to git
-- Package import into other Unity projects
+- Package import into other Unity projects

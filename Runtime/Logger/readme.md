@@ -103,3 +103,18 @@ using (Log.AddScopedSink(sink, config, LogLevel.Verbose)) {
 ```
 
 `Log.ClearSinks` drops every registration without restoring. `LogBootstrap` calls it before registering, so entering play mode with domain reload disabled re-registers rather than stacking a second copy of every sink, and it calls it again on returning to edit mode so play-mode sinks do not outlive the session.
+## Tallying Sink
+
+`TallyingLogSink` keeps one entry per distinct message with a count instead of writing anything. Its constructor takes the maximum number of distinct entries, so it is not reflection-discoverable; register it yourself and `Drain` it on your own schedule. Messages arriving once the cap is reached are counted in `DroppedCount`, which `Drain(out int droppedCount)` returns and resets. It is safe to emit into from background threads.
+
+```csharp
+var tally = new TallyingLogSink(256);
+Log.AddSink(tally, config, LogLevel.Warning);
+
+foreach (var entry in tally.Drain())
+    Send(entry.Level, entry.Source, entry.Message, entry.Count);
+```
+
+## Capturing the Unity Log
+
+Tick **Capture Unity Log** on the config and every `Debug.Log`, warning, error and exception, including those raised by Unity and third-party packages, flows through the sinks with the source `Unity` and the stack trace appended to the message. Messages below the global level are dropped. `UnityLogCapture.Start` and `Stop` do the same from code. Output that a sink itself sends to the Unity console is recognised and never captured a second time.
