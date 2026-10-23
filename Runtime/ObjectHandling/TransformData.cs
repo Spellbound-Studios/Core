@@ -35,6 +35,7 @@ namespace Spellbound.Core {
         public TransformData(Transform transform) {
             Position = transform.position;
             Rotation = math.degrees(math.EulerXYZ(transform.rotation));
+            // TODO: Tinker it looks like we are silently dropping non-uniform scale please investigate
             Scale = transform.localScale.x;
         }
 
@@ -49,7 +50,7 @@ namespace Spellbound.Core {
                     Scale = Scale
                 };
 
-        public Quaternion RotAsQuaternion() => Quaternion.Euler(Rotation);
+        public Quaternion RotAsQuaternion() => quaternion.EulerXYZ(math.radians(Rotation));
 
         public Vector3 ScaleAsVector3() => new(Scale, Scale, Scale);
 

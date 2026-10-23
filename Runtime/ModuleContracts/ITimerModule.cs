@@ -13,6 +13,6 @@ namespace Spellbound.Core.ModuleContracts {
     public interface ITimerModule<T> : ITimerModule where T : IPackerObjectData {
         void OnTimerUpdate(
             T data, uint time, IObjectDataAccess dataAccess,
-            int instanceIndex, ObjectPreset preset, int eventSurfaceIndex = 0);
+            int instanceIndex, ObjectPreset preset, byte eventSurfaceIndex = 0);
     }
 }

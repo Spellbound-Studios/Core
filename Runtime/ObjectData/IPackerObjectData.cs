@@ -15,11 +15,11 @@ namespace Spellbound.Core.ObjectData {
 
         void InvokeChangeCallback(
             byte context, ObjectParent parent, int instanceIndex,
-            ObjectPreset preset, int surfaceIndex, TransformData transformData);
+            ObjectPreset preset, byte surfaceIndex, TransformData transformData);
 
         void InvokeResolveCallback(
             byte context, ObjectParent parent, int instanceIndex,
-            ObjectPreset preset, int surfaceIndex, TransformData transformData);
+            ObjectPreset preset, byte surfaceIndex, TransformData transformData);
         
     }
 }

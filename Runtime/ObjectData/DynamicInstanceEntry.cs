@@ -34,7 +34,7 @@ namespace Spellbound.Core.ObjectData {
 
             foreach (var (key, bytes) in DataSlots) {
                 Packer.WriteUInt(ref buffer, key.PackerHash);
-                Packer.WriteInt(ref buffer, key.SurfaceIndex);
+                Packer.WriteByte(ref buffer, key.SurfaceIndex);
                 Packer.WriteBytes(ref buffer, bytes);
             }
         }
@@ -50,7 +50,7 @@ namespace Spellbound.Core.ObjectData {
 
             for (var i = 0; i < count; i++) {
                 var packerHash = Packer.ReadUInt(ref buffer);
-                var surfaceIndex = Packer.ReadInt(ref buffer);
+                var surfaceIndex = Packer.ReadByte(ref buffer);
                 var bytes = Packer.ReadBytes(ref buffer);
                 DataSlots[new InstanceDataKey(packerHash, surfaceIndex)] = bytes;
             }

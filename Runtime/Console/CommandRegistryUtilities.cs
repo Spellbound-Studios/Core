@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Spellbound.Core.Tooling;
 using UnityEngine;
 
 namespace Spellbound.Core.Console {
@@ -20,33 +21,8 @@ namespace Spellbound.Core.Console {
 
         /// <summary>
         /// Gets all assemblies that should be scanned for commands.
-        /// Filters out Unity editor assemblies and third-party editor plugins.
         /// </summary>
-        public static IEnumerable<Assembly> GetScannableAssemblies() {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-            return assemblies.Where(assembly => {
-                var assemblyName = assembly.GetName().Name;
-
-                return !ShouldSkipAssembly(assemblyName);
-            });
-        }
-
-        /// <summary>
-        /// Determines if an assembly should be skipped during command discovery.
-        /// </summary>
-        public static bool ShouldSkipAssembly(string assemblyName) {
-            if (string.IsNullOrEmpty(assemblyName))
-                return true;
-
-            if (assemblyName.StartsWith("UnityEditor"))
-                return true;
-
-            return assemblyName.Contains("Editor") &&
-                   (assemblyName.StartsWith("JetBrains") ||
-                    assemblyName.StartsWith("Unity.") ||
-                    assemblyName.Contains(".Editor."));
-        }
+        public static IEnumerable<Assembly> GetScannableAssemblies() => AssemblyScanning.ScannableAssemblies();
 
         /// <summary>
         /// Normalizes a command name to lowercase for consistent lookups.

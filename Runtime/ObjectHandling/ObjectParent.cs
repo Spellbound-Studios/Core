@@ -31,13 +31,18 @@ namespace Spellbound.Core.ObjectHandling {
         private EntityQuery _dynamicQuery;
         private readonly Entity _ecsChunk;
 
+        private const float SurfaceQueryMovementThreshold = 4f;
+
         private readonly Dictionary<int, IEventSurface> _eventSurfaces = new();
         private Vector3 _lastPovPosition;
+        private bool _hasEvaluatedStaticProximity;
+        private int _lastEvaluatedStaticEntityCount;
 
         public IObjectDataAccess StaticDataAccess { get; }
         public IDynamicDataAccess DynamicDataAccess { get; }
 
         private int _seedInstanceCount;
+        private int _instanceIndexCursor = int.MinValue;
 
         public event Action<float3[]> OnDynamicProximityEval = delegate { };
 
@@ -127,7 +132,7 @@ namespace Spellbound.Core.ObjectHandling {
             DynamicDataAccess.CreateRuntimeObject(preset.Hash, position, rotation, scale);
         }
 
-        public bool TryReadData<T>(int instanceIndex, uint presetHash, int eventSurfaceIndex, out T result)
+        public bool TryReadData<T>(int instanceIndex, uint presetHash, byte eventSurfaceIndex, out T result)
                 where T : IPackerObjectData, new() {
             if (StaticDataAccess.TryRead<T>(instanceIndex, eventSurfaceIndex, out var data)) {
                 result = data;
@@ -141,28 +146,26 @@ namespace Spellbound.Core.ObjectHandling {
         }
 
         public bool TryReadDataAllData(
-            int instanceIndex, uint presetHash, int eventSurfaceIndex, out List<IPackerObjectData> results) =>
-                StaticDataAccess.TryReadAll(instanceIndex, eventSurfaceIndex, out results);
+            int instanceIndex, uint presetHash, byte eventSurfaceIndex, out List<IPackerObjectData> results) =>
+                StaticDataAccess.TryReadAllBySurface(instanceIndex, eventSurfaceIndex, out results);
 
-        public bool TryWriteData<T>(
-            int instanceIndex, uint presetHash, int eventSurfaceIndex, T newData, byte context = 0)
+        public bool WriteData<T>(
+            int instanceIndex, uint presetHash, byte eventSurfaceIndex, T newData, byte context = 0)
                 where T : IPackerObjectData, new() {
             StaticDataAccess.Write(instanceIndex, presetHash, eventSurfaceIndex, newData, context);
 
             return true;
         }
 
-        public bool TryTransformData<TData, TDispatch>(
-            int instanceIndex, uint presetHash, int eventSurfaceIndex, TDispatch delta)
+        public void Delta<TData, TDispatch>(
+            int instanceIndex, uint presetHash, byte eventSurfaceIndex, TDispatch delta)
                 where TData : IPackerObjectData, new()
                 where TDispatch : IPackerDispatch, new(){
             StaticDataAccess.Delta<TData, TDispatch>(instanceIndex, presetHash, eventSurfaceIndex, delta);
-
-            return true;
         }
 
-        public async Task<bool> TryDeleteData(int instanceIndex) =>
-                await StaticDataAccess.TryDeleteInstance(instanceIndex);
+        public void DeleteInstance(int instanceIndex) =>
+                StaticDataAccess.DeleteInstance(instanceIndex);
 
         #endregion API
 
@@ -337,12 +340,14 @@ namespace Spellbound.Core.ObjectHandling {
         #region IObjectInstanceConsumer Implementation
 
         public int GetNextInstanceIndex() {
-            var i = _seedInstanceCount;
+            if (_instanceIndexCursor < _seedInstanceCount)
+                _instanceIndexCursor = _seedInstanceCount;
 
-            while (StaticDataAccess.HasInstance(i) || DynamicDataAccess.HasInstance(i))
-                i++;
+            while (StaticDataAccess.HasInstance(_instanceIndexCursor)
+                   || DynamicDataAccess.HasInstance(_instanceIndexCursor))
+                _instanceIndexCursor++;
 
-            return i;
+            return _instanceIndexCursor;
         }
 
         /// <summary>
@@ -540,8 +545,11 @@ namespace Spellbound.Core.ObjectHandling {
 
             if (!_eventSurfaces.TryGetValue(instanceIndex, out var mainSurface)) return false;
 
-            if (!mainSurface.TryGetEventSurfaceByIndex(surfaceIndex, out surface))
+            if (!mainSurface.TryGetEventSurfaceByIndex(surfaceIndex, out surface)) {
                 Log.Error($"Surface not found for instanceIndex {instanceIndex} and surfaceIndex  {surfaceIndex}");
+
+                return false;
+            }
 
             transformData = new TransformData(surface.Transform);
             preset = surface.Preset;
@@ -675,14 +683,24 @@ namespace Spellbound.Core.ObjectHandling {
             instancesToSleep.Dispose();
         }
 
-        public void StaticEntityDistanceQuery(float3 localPov) {
+        public bool StaticEntityDistanceQuery(float3 localPov) {
+            var maxCapacity = _staticQuery.CalculateEntityCount();
+
+            if (_hasEvaluatedStaticProximity
+                && maxCapacity == _lastEvaluatedStaticEntityCount
+                && math.distancesq(localPov, _lastPovPosition)
+                   < SurfaceQueryMovementThreshold * SurfaceQueryMovementThreshold)
+                return false;
+
+            _hasEvaluatedStaticProximity = true;
+            _lastEvaluatedStaticEntityCount = maxCapacity;
             _lastPovPosition = localPov;
+
             var existingEventSurfaces = new NativeHashSet<int>(_eventSurfaces.Count, Allocator.TempJob);
 
             foreach (var key in _eventSurfaces.Keys)
                 existingEventSurfaces.Add(key);
 
-            var maxCapacity = _staticQuery.CalculateEntityCount();
             var entities = _staticQuery.ToEntityArray(Allocator.TempJob);
             var transforms = _staticQuery.ToComponentDataArray<LocalTransform>(Allocator.TempJob);
             var thresholds = _staticQuery.ToComponentDataArray<ProximityThresholdComponent>(Allocator.TempJob);
@@ -725,6 +743,8 @@ namespace Spellbound.Core.ObjectHandling {
             existingEventSurfaces.Dispose();
             instancesToAwaken.Dispose();
             instancesToSleep.Dispose();
+
+            return true;
         }
 
         #endregion Distance Queries

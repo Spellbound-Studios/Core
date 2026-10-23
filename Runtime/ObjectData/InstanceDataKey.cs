@@ -5,9 +5,9 @@ using System;
 namespace Spellbound.Core.ObjectData {
     public readonly struct InstanceDataKey : IEquatable<InstanceDataKey> {
         public readonly uint PackerHash;
-        public readonly int SurfaceIndex;
+        public readonly byte SurfaceIndex;
 
-        public InstanceDataKey(uint packerHash, int surfaceIndex) {
+        public InstanceDataKey(uint packerHash, byte surfaceIndex) {
             PackerHash = packerHash;
             SurfaceIndex = surfaceIndex;
         }

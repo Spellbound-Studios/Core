@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Spellbound.Core.Tooling;
 using UnityEngine;
 
 namespace Spellbound.Core.Console {
@@ -36,6 +37,9 @@ namespace Spellbound.Core.Console {
 
         private static bool _isInitialized;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForPlaySession() => Clear();
+
         /// <summary>
         /// Initializes the method registry by scanning all assemblies for [ConsolePresetCommand] and [ConsoleUtilityCommand].
         /// </summary>
@@ -58,7 +62,7 @@ namespace Spellbound.Core.Console {
 
             foreach (var assembly in assemblies) {
                 try {
-                    var types = assembly.GetTypes();
+                    var types = AssemblyScanning.LoadableTypes(assembly);
 
                     foreach (var type in types) {
                         var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic |
@@ -456,8 +460,12 @@ namespace Spellbound.Core.Console {
             if (method.IsStatic)
                 return null;
 
-            if (MethodInstances.TryGetValue(method, out var cached))
-                return cached;
+            if (MethodInstances.TryGetValue(method, out var cached)) {
+                if (cached is not UnityEngine.Object unityObject || unityObject)
+                    return cached;
+
+                MethodInstances.Remove(method);
+            }
 
             // I really dislike this right now, but I'm not sure how to improve it just yet.
             if (typeof(MonoBehaviour).IsAssignableFrom(method.DeclaringType)) {

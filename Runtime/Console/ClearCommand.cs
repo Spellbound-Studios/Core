@@ -1,6 +1,4 @@
-﻿// Copyright 2025 Spellbound Studio Inc.
-
-using UnityEngine;
+// Copyright 2026 Spellbound Studio Inc.
 
 namespace Spellbound.Core.Console {
     [ConsoleCommandClass("clear", "cls")]
@@ -10,12 +8,7 @@ namespace Spellbound.Core.Console {
         public string Usage => "clear";
 
         public CommandResult Execute(string[] args) {
-            var console = Object.FindAnyObjectByType<ConsoleController>();
-
-            if (console == null)
-                return CommandResult.Fail("Console controller not found");
-
-            console.ClearOutput();
+            ConsoleLogger.Clear();
 
             return CommandResult.Ok();
         }

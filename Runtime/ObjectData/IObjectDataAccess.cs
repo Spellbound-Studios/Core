@@ -29,20 +29,22 @@ namespace Spellbound.Core.ObjectData {
         bool IsDeleted(int instanceIndex);
 
         // Intended to be the implementation for simply reading data on an instance.
-        bool TryRead<T>(int instanceIndex, int eventSurfaceIndex, out T data)
+        bool TryRead<T>(int instanceIndex, byte eventSurfaceIndex, out T data)
                 where T : IPackerObjectData, new();
 
-        bool TryReadAll(int instanceIndex, int eventSurfaceIndex, out List<IPackerObjectData> data);
+        bool TryReadAllBySurface(int instanceIndex, byte eventSurfaceIndex, out List<IPackerObjectData> data);
+        
+        bool TryReadAll(int instanceIndex, out List<IPackerObjectData> data);
 
         // Intended to be the implementation for writing over any data with new data on an object.
-        void Write<T>(int instanceIndex, uint presetHash, int eventSurfaceIndex, T newData, byte contextIn)
+        void Write<T>(int instanceIndex, uint presetHash, byte eventSurfaceIndex, T newData, byte contextIn)
                 where T : IPackerObjectData, new();
 
         // Intended to be the implementation for transforming current object data with incoming data.
-        void Delta<TData, TDispatch>(int instanceIndex, uint presetHash, int eventSurfaceIndex, TDispatch dispatch)
+        void Delta<TData, TDispatch>(int instanceIndex, uint presetHash, byte eventSurfaceIndex, TDispatch dispatch)
                 where TData : IPackerObjectData, new() where TDispatch : IPackerDispatch, new();
 
         // Intended to be the implementation for deleting an instance with confirmation of deletion.
-        Task<bool> TryDeleteInstance(int instanceIndex);
+        void DeleteInstance(int instanceIndex);
     }
 }

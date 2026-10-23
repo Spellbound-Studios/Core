@@ -1,9 +1,5 @@
 ﻿// Copyright 2026 Spellbound Studio Inc.
 
-// === LogConfigEditor.cs ===
-// Copyright 2026 Spellbound Studio Inc.
-
-#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +20,11 @@ namespace Spellbound.Core.Logging.Editor {
         private const string FileLabel = "File Output";
         private const string FileNameLabel = "Log File Name";
         private const string UndoFileNameLabel = "Change Log File Name";
+        private const string CaptureLabel = "Unity Log";
+        private const string CaptureToggleLabel = "Capture Unity Log";
+        private const string UndoCaptureLabel = "Toggle Unity Log Capture";
+        private const string CaptureSubtitle =
+                "Routes Debug.Log, warnings, errors and exceptions through the sinks below.";
         private const string HeaderLabel = "Spellbound Log Configuration";
         private const string SinksLabel = "Sinks";
         private const string UndoLevelLabel = "Change Global Log Level";
@@ -76,6 +77,8 @@ namespace Spellbound.Core.Logging.Editor {
             DrawLevelSection(config);
             EditorGUILayout.Space(4);
             DrawFileSection(config);
+            EditorGUILayout.Space(4);
+            DrawCaptureSection(config);
             EditorGUILayout.Space(4);
             DrawSinksSection(config);
             EditorGUILayout.Space(8);
@@ -132,6 +135,22 @@ namespace Spellbound.Core.Logging.Editor {
             EditorGUILayout.EndVertical();
         }
 
+        private static void DrawCaptureSection(LogConfig config) {
+            EditorGUILayout.BeginVertical(_sectionStyle);
+
+            EditorGUILayout.LabelField(CaptureLabel, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(CaptureSubtitle, _subtitleStyle);
+
+            var newCapture = EditorGUILayout.Toggle(CaptureToggleLabel, config.captureUnityLog);
+
+            if (newCapture != config.captureUnityLog) {
+                Undo.RecordObject(config, UndoCaptureLabel);
+                config.captureUnityLog = newCapture;
+            }
+
+            EditorGUILayout.EndVertical();
+        }
+
         private static void DrawSinksSection(LogConfig config) {
             EditorGUILayout.BeginVertical(_sectionStyle);
 
@@ -173,6 +192,9 @@ namespace Spellbound.Core.Logging.Editor {
                         continue;
 
                     if (type.IsAbstract || type.IsInterface)
+                        continue;
+
+                    if (!type.IsPublic)
                         continue;
 
                     if (type.GetConstructor(Type.EmptyTypes) == null)
@@ -295,4 +317,3 @@ namespace Spellbound.Core.Logging.Editor {
         }
     }
 }
-#endif

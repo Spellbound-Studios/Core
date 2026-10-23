@@ -1,4 +1,7 @@
-﻿// Copyright 2025 Spellbound Studio Inc.
+// Copyright 2026 Spellbound Studio Inc.
+
+using System;
+using UnityEngine;
 
 namespace Spellbound.Core.Console {
     /// <summary>
@@ -6,33 +9,32 @@ namespace Spellbound.Core.Console {
     /// Useful for debugging and adding capability to your packages.
     /// </summary>
     public static class ConsoleLogger {
-        private static ConsoleController _consoleControllerInstance;
+        public static event Action<string> LinePrinted;
+        public static event Action<string> ErrorPrinted;
+        public static event Action Cleared;
 
-        /// <summary>
-        /// Initialize the logger with a console instance.
-        /// Called automatically by ConsoleController on Awake.
-        /// </summary>
-        internal static void Initialize(ConsoleController console) => _consoleControllerInstance = console;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForPlaySession() {
+            LinePrinted = null;
+            ErrorPrinted = null;
+            Cleared = null;
+        }
 
         /// <summary>
         /// Print a message to the developer console.
         /// </summary>
-        public static void PrintToConsole(string message) {
-            if (_consoleControllerInstance != null)
-                _consoleControllerInstance.LogOutput(message);
-        }
+        public static void PrintToConsole(string message) => LinePrinted?.Invoke(message);
 
         /// <summary>
         /// Print an error message to the developer console.
         /// </summary>
-        public static void PrintError(string message) {
-            if (_consoleControllerInstance != null)
-                _consoleControllerInstance.LogError(message);
-        }
+        public static void PrintError(string message) => ErrorPrinted?.Invoke(message);
+
+        public static void Clear() => Cleared?.Invoke();
 
         /// <summary>
         /// Check if the console logger is initialized and ready to use.
         /// </summary>
-        public static bool IsInitialized => _consoleControllerInstance != null;
+        public static bool IsInitialized => LinePrinted != null;
     }
 }

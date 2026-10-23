@@ -1,6 +1,5 @@
 ﻿// Copyright 2026 Spellbound Studio Inc.
 
-#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using Spellbound.Core.Modules;
@@ -340,5 +339,4 @@ namespace Spellbound.Core {
             return v;
         }
     }
-}
-#endif
+}

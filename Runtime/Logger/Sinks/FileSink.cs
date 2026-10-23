@@ -1,8 +1,5 @@
 ﻿// Copyright 2026 Spellbound Studio Inc.
 
-// === FileSink.cs ===
-// Copyright 2026 Spellbound Studio Inc.
-
 using System;
 using System.Collections.Concurrent;
 using System.IO;

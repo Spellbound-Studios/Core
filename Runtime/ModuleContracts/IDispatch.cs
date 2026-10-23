@@ -13,6 +13,6 @@ namespace Spellbound.Core.ModuleContracts {
     /// <typeparam name="T"></typeparam>
     public interface IDispatch<T> where T : IPackerDispatch {
         bool OnDispatch(
-            T dispatchContext, IEventSurface eventSurface, IObjectParent parent = null, int instanceIndex = -1);
+            T dispatchContext, IEventSurface eventSurface);
     }
 }

@@ -14,7 +14,7 @@ namespace Spellbound.Core.Surfaces {
     [RequireComponent(typeof(Collider))]
     public class StaticEventSurface : MonoBehaviour, IEventSurface {
         [SerializeField, Tooltip("Decide your own surface index schema.")]
-        private int surfaceIndex = -1;
+        private byte surfaceIndex;
 
         public Vector3 Position => transform.position;
 
@@ -23,7 +23,7 @@ namespace Spellbound.Core.Surfaces {
         public Transform Transform => transform;
 
         private IObjectParent _parent;
-        private int _entityIndex;
+        private int _instanceIndex;
 
         private Dictionary<int, IEventSurface> _childEventSurfaces = new();
 
@@ -33,7 +33,7 @@ namespace Spellbound.Core.Surfaces {
             IObjectParent objectParent, int entityIndex, uint presetHash,
             Dictionary<InstanceDataKey, byte[]> dataSlots = null) {
             _parent = objectParent;
-            _entityIndex = entityIndex;
+            _instanceIndex = entityIndex;
             Preset = presetHash.ResolvePreset();
 
             var childSurfaces = GetComponentsInChildren<StaticEventSurface>(true);
@@ -42,7 +42,7 @@ namespace Spellbound.Core.Surfaces {
                 if (childSurface == this)
                     continue;
 
-                var childSurfaceIndex = childSurface.Initialize(_parent, _entityIndex, Preset.Hash, dataSlots);
+                var childSurfaceIndex = childSurface.Initialize(_parent, _instanceIndex, Preset.Hash, dataSlots);
 
                 if (!_childEventSurfaces.TryAdd(childSurfaceIndex, childSurface))
                     Log.Error($"Duplicate surfaceIndex {childSurfaceIndex} on {childSurface.gameObject.name}");
@@ -53,24 +53,15 @@ namespace Spellbound.Core.Surfaces {
 
         public void DebugQueryPing() =>
                 Debug.Log($"Pinging Event Surface for {Preset.name} " +
-                          $"index {_entityIndex} " +
+                          $"index {_instanceIndex} " +
                           $"and surface index {surfaceIndex}");
-
-        // Declare a THandler type at runtime that will pass in a pointer of that type to THAT types implementation.
+        
         public bool Dispatch<TContext>(TContext dispatch) where TContext : IPackerDispatch {
             if (Preset == null)
                 return false;
-
-            // If this event surface doesn't have children - early return.
-            if (surfaceIndex < 0 || surfaceIndex >= Preset.surfaceModules.Count)
-                return false;
-
-            // If it does have children loop through them and invoke.
-            foreach (var module in Preset.surfaceModules[surfaceIndex].presetModules) {
-                if (module is IDispatch<TContext> handler)
-                    handler.OnDispatch(dispatch, this, _parent, _entityIndex);
-            }
-            return false;
+            
+            return Preset.TryGetModule(out IDispatch<TContext> handler, surfaceIndex) 
+                   && handler.OnDispatch(dispatch, this);
         }
 
         public event Action OnChanged;
@@ -87,11 +78,21 @@ namespace Spellbound.Core.Surfaces {
             return _childEventSurfaces.TryGetValue(desiredSurfaceIndex, out surface);
         }
         
-        //TODO
-        public bool TryRead<T>(out T data) where T : IPackerObjectData, new() => throw new NotImplementedException();
+        public bool TryRead<T>(out T data) where T : IPackerObjectData, new() {
+            return _parent.ObjectParent.TryReadData(_instanceIndex, Preset.Hash, surfaceIndex,  out data);
+        }
 
-        public bool TryWrite<T>(T data, byte contextIn) where T : IPackerObjectData, new() => throw new NotImplementedException();
+        public void Write<T>(T data, byte contextIn) where T : IPackerObjectData, new() {
+            _parent.ObjectParent.WriteData(_instanceIndex, Preset.Hash, surfaceIndex, data, contextIn);
+        }
 
-        public bool TryDestroy() => throw new NotImplementedException();
+        public void Delta<TData, TDispatch>(TDispatch dispatch) where TData : IPackerObjectData, new()
+                where TDispatch : IPackerDispatch, new() {
+            _parent.ObjectParent.Delta<TData, TDispatch>(_instanceIndex, Preset.Hash, surfaceIndex, dispatch);
+        }
+
+        public void Destroy() {
+            _parent.ObjectParent.DeleteInstance(_instanceIndex);
+        }
     }
 }

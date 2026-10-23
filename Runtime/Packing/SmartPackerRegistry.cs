@@ -6,6 +6,7 @@ using System.Reflection;
 using Spellbound.Core.Hashing;
 using Spellbound.Core.Logging;
 using Spellbound.Core.Registries;
+using Spellbound.Core.Tooling;
 using UnityEngine;
 
 namespace Spellbound.Core.Packing {
@@ -35,8 +36,8 @@ namespace Spellbound.Core.Packing {
             if (_isLoaded) return;
             _isLoaded = true;
 
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                foreach (var type in assembly.GetTypes()) {
+            foreach (var assembly in AssemblyScanning.ScannableAssemblies()) {
+                foreach (var type in AssemblyScanning.LoadableTypes(assembly)) {
                     if (!typeof(ISmartPacker).IsAssignableFrom(type)) continue;
                     if (type.IsAbstract || type.IsInterface) continue;
 

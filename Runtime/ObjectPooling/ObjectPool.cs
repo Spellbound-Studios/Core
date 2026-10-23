@@ -15,13 +15,31 @@ namespace Spellbound.Core.ObjectPooling {
         /// <summary>How many items are parked and rentable without allocating.</summary>
         public int Available => _free.Count;
 
+        public int MaximumRetained { get; set; }
+
         /// <summary>Rent an item — popped off the top, or freshly <see cref="Create"/>d when the pool is empty.</summary>
         public T Rent() => _free.Count > 0 ? _free.Pop() : Create();
 
         /// <summary>Reset an item and park it for the next <see cref="Rent"/>.</summary>
         public void Return(T item) {
+            if (MaximumRetained > 0 && _free.Count >= MaximumRetained) {
+                Discard(item);
+
+                return;
+            }
+
             Reset(item);
             _free.Push(item);
+        }
+
+        public void Prewarm(int count) {
+            var target = MaximumRetained > 0 && count > MaximumRetained ? MaximumRetained : count;
+
+            while (_free.Count < target) {
+                var item = Create();
+                Reset(item);
+                _free.Push(item);
+            }
         }
 
         /// <summary>Build a fresh instance when the pool has none to hand out.</summary>
@@ -29,5 +47,7 @@ namespace Spellbound.Core.ObjectPooling {
 
         /// <summary>Return an item to a clean state before it is reused. No-op by default.</summary>
         protected virtual void Reset(T item) { }
+
+        protected virtual void Discard(T item) { }
     }
 }

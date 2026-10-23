@@ -1,4 +1,4 @@
-﻿// Copyright 2025 Spellbound Studio Inc.
+﻿// Copyright 2026 Spellbound Studio Inc.
 
 using System;
 using System.Collections.Generic;
@@ -56,17 +56,24 @@ namespace Spellbound.Core.Console {
             CommandRegistry.Instance.AutoRegisterCommands();
 
             SetVisibilityImmediate(false);
-            ConsoleLogger.Initialize(this);
         }
 
         private void OnEnable() {
             if (inputField != null)
                 inputField.onSubmit.AddListener(OnSubmitInput);
+
+            ConsoleLogger.LinePrinted += LogOutput;
+            ConsoleLogger.ErrorPrinted += LogError;
+            ConsoleLogger.Cleared += ClearOutput;
         }
 
         private void OnDisable() {
             if (inputField != null)
                 inputField.onSubmit.RemoveListener(OnSubmitInput);
+
+            ConsoleLogger.LinePrinted -= LogOutput;
+            ConsoleLogger.ErrorPrinted -= LogError;
+            ConsoleLogger.Cleared -= ClearOutput;
         }
 
         #endregion

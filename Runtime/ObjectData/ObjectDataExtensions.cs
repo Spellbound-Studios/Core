@@ -9,7 +9,7 @@ using Spellbound.Core.ModuleContracts;
 namespace Spellbound.Core.ObjectData {
     public static class ObjectDataExtensions {
         public static IPackerObjectData GetDefaultData<T>(
-            this T data, ObjectPreset preset, int surfaceIndex, byte level = 1)
+            this T data, ObjectPreset preset, byte surfaceIndex, byte level = 1)
                 where T : IPackerObjectData {
             if (preset.TryGetModule<IDefaultDataProvider<T>>(out var provider, surfaceIndex))
                 return provider.GetDefaultData(preset, level);
@@ -19,7 +19,7 @@ namespace Spellbound.Core.ObjectData {
         
         
         public static T ApplyDelta<T, TDelta>(
-            this T data, TDelta delta, ObjectPreset preset, int surfaceIndex, out byte context, out ISmartPacker consequence)
+            this T data, TDelta delta, ObjectPreset preset, byte surfaceIndex, out byte context, out ISmartPacker consequence)
                 where T : IPackerObjectData
                 where TDelta : ISmartPacker {
             if (!preset.TryGetModule<IApplyDelta<T, TDelta>>(out var module, surfaceIndex)) {
@@ -34,7 +34,7 @@ namespace Spellbound.Core.ObjectData {
 
         public static void ChangeCallback<T>(
             this T data, byte context, ObjectParent parent,
-            int instanceIndex, ObjectPreset preset, int surfaceIndex, TransformData transformData)
+            int instanceIndex, ObjectPreset preset, byte surfaceIndex, TransformData transformData)
                 where T : IPackerObjectData {
             if (!preset.TryGetModules<IChangeHandler<T>>(out var modules, surfaceIndex))
                 return;
@@ -45,7 +45,7 @@ namespace Spellbound.Core.ObjectData {
 
         public static void ResolveCallback<T>(
             this T data, byte context, ObjectParent parent,
-            int instanceIndex, ObjectPreset preset, int surfaceIndex, TransformData transformData)
+            int instanceIndex, ObjectPreset preset, byte surfaceIndex, TransformData transformData)
                 where T : IPackerObjectData {
             if (!preset.TryGetModules<IChangeResolver<T>>(out var modules, surfaceIndex))
                 return;

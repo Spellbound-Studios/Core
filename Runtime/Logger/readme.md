@@ -52,7 +52,7 @@ Example: global set to **Debug**, File sink filtered to **Debug**, Unity Console
 
 ## Creating a Custom Sink
 
-Implement `ILogSink` with a parameterless constructor. It will be discovered automatically via reflection and appear in the config inspector.
+Implement `ILogSink` as a public, top-level type with a parameterless constructor. It will be discovered automatically via reflection and appear in the config inspector. Nested and internal sinks, and sinks whose constructor takes arguments, are never discovered, so they stay out of the inspector and out of user config assets.
 
 ```csharp
 public class TelemetrySink : ILogSink {
@@ -73,3 +73,48 @@ Sinks with external dependencies that require constructor arguments should skip 
 ```csharp
 Log.AddSink(new MyComplexSink(apiKey, endpoint), config, LogLevel.Warning);
 ```
+
+## Temporary Sinks
+
+`Log.RemoveSink` unregisters a sink by instance and returns whether it was registered. `Log.AddScopedSink` returns a disposable that removes it again, so a sink can be attached for the life of a `using` block and nothing leaks into the rest of the session.
+
+```csharp
+var sink = new RecordingLogSink(LogLevel.Error);
+
+using (Log.AddScopedSink(sink, config, LogLevel.Verbose)) {
+    RunTheThingThatShouldFail();
+    Assert.AreEqual(1, sink.CountOf(LogLevel.Error));
+    Assert.IsTrue(sink.Contains(LogLevel.Error, "chunk load failed"));
+}
+```
+
+`RecordingLogSink` keeps entries in memory instead of writing them anywhere, which is what lets a test assert that code reported an error. Its constructor takes a minimum level, so it is not reflection-discoverable and never appears in the config inspector. `Entries`, `Count`, `CountOf`, `Contains`, and `Clear` are the reading surface, and it is safe to emit into from background threads.
+
+Removal does not dispose the sink. Sinks that hold resources, like `FileSink`, are still the caller's to dispose.
+
+To mute sinks you do not hold a reference to, such as the ones `LogBootstrap` registered from config, use `Log.SuspendSinks`. It detaches everything and reattaches on dispose, leaving any sink registered during the suspension in place.
+
+```csharp
+using (Log.SuspendSinks())
+using (Log.AddScopedSink(sink, config, LogLevel.Verbose)) {
+    RunTheThingThatShouldFail();
+    Assert.AreEqual(1, sink.CountOf(LogLevel.Error));
+}
+```
+
+`Log.ClearSinks` drops every registration without restoring. `LogBootstrap` calls it before registering, so entering play mode with domain reload disabled re-registers rather than stacking a second copy of every sink, and it calls it again on returning to edit mode so play-mode sinks do not outlive the session.
+## Tallying Sink
+
+`TallyingLogSink` keeps one entry per distinct message with a count instead of writing anything. Its constructor takes the maximum number of distinct entries, so it is not reflection-discoverable; register it yourself and `Drain` it on your own schedule. Messages arriving once the cap is reached are counted in `DroppedCount`, which `Drain(out int droppedCount)` returns and resets. It is safe to emit into from background threads.
+
+```csharp
+var tally = new TallyingLogSink(256);
+Log.AddSink(tally, config, LogLevel.Warning);
+
+foreach (var entry in tally.Drain())
+    Send(entry.Level, entry.Source, entry.Message, entry.Count);
+```
+
+## Capturing the Unity Log
+
+Tick **Capture Unity Log** on the config and every `Debug.Log`, warning, error and exception, including those raised by Unity and third-party packages, flows through the sinks with the source `Unity` and the stack trace appended to the message. Messages below the global level are dropped. `UnityLogCapture.Start` and `Stop` do the same from code. Output that a sink itself sends to the Unity console is recognised and never captured a second time.

@@ -17,6 +17,6 @@ namespace Spellbound.Core.ModuleContracts {
     public interface IApplyDelta<TData, in TDelta> 
             where TData : IPackerObjectData
             where TDelta : ISmartPacker {
-        TData ApplyDelta(TData data, TDelta delta, ObjectPreset preset, int surfaceIndex, out byte context, out ISmartPacker consequence);
+        TData ApplyDelta(TData data, TDelta delta, ObjectPreset preset, byte surfaceIndex, out byte context, out ISmartPacker consequence);
     }
 }

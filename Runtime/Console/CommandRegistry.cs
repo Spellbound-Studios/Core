@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Spellbound.Core.Tooling;
 using UnityEngine;
 
 namespace Spellbound.Core.Console {
@@ -13,6 +14,9 @@ namespace Spellbound.Core.Console {
     public class CommandRegistry {
         private static CommandRegistry _instance;
         public static CommandRegistry Instance => _instance ??= new CommandRegistry();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForPlaySession() => _instance = null;
 
         // Stores all of our commands that implement the interface ICommand.
         private readonly Dictionary<string, ICommand> _commands =
@@ -30,8 +34,7 @@ namespace Spellbound.Core.Console {
         /// Call this during initialization.
         /// </summary>
         public void AutoRegisterCommands() {
-            // https://learn.microsoft.com/en-us/dotnet/api/system.appdomain.getassemblies?view=net-9.0
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = CommandRegistryUtilities.GetScannableAssemblies();
 
             foreach (var assembly in assemblies) {
                 try {
@@ -47,7 +50,7 @@ namespace Spellbound.Core.Console {
         /// Auto-register commands from a specific assembly.
         /// </summary>
         public void AutoRegisterCommandsFromAssembly(Assembly assembly) {
-            var commandTypes = assembly.GetTypes()
+            var commandTypes = AssemblyScanning.LoadableTypes(assembly)
                     .Where(t => t.IsClass && !t.IsAbstract && typeof(ICommand).IsAssignableFrom(t))
                     .Where(t => t.GetCustomAttribute<ConsoleCommandClassAttribute>() != null);
 

@@ -6,6 +6,7 @@ using System.Reflection;
 using Spellbound.Core.ModuleContracts;
 using Spellbound.Core.Objects;
 using Spellbound.Core.Packing;
+using Spellbound.Core.Tooling;
 using UnityEngine;
 
 namespace Spellbound.Core.ObjectData {
@@ -26,7 +27,7 @@ namespace Spellbound.Core.ObjectData {
         /// consequence to award.
         /// </summary>
         public delegate byte[] DeltaApply(
-            byte[] currentBytes, byte[] deltaBytes, ObjectPreset preset, int surfaceIndex,
+            byte[] currentBytes, byte[] deltaBytes, ObjectPreset preset, byte surfaceIndex,
             out IPackerObjectData result, out byte context, out ISmartPacker consequence);
 
         private static readonly Dictionary<(uint dataHash, uint deltaHash), DeltaApply> Table = new();
@@ -50,7 +51,7 @@ namespace Spellbound.Core.ObjectData {
         /// module default), applies it, and repacks the result. Shared with the reflection path below.
         /// </summary>
         public static byte[] ApplyTyped<TData, TDelta>(
-            byte[] currentBytes, TDelta delta, ObjectPreset preset, int surfaceIndex,
+            byte[] currentBytes, TDelta delta, ObjectPreset preset, byte surfaceIndex,
             out IPackerObjectData result, out byte context, out ISmartPacker consequence)
                 where TData : IPackerObjectData, new()
                 where TDelta : ISmartPacker, new() {
@@ -76,7 +77,7 @@ namespace Spellbound.Core.ObjectData {
         /// <see cref="ApplyTyped{TData,TDelta}"/>.
         /// </summary>
         private static byte[] Run<TData, TDelta>(
-            byte[] currentBytes, byte[] deltaBytes, ObjectPreset preset, int surfaceIndex,
+            byte[] currentBytes, byte[] deltaBytes, ObjectPreset preset, byte surfaceIndex,
             out IPackerObjectData result, out byte context, out ISmartPacker consequence)
                 where TData : IPackerObjectData, new()
                 where TDelta : ISmartPacker, new() {
@@ -94,8 +95,8 @@ namespace Spellbound.Core.ObjectData {
 
             var open = typeof(DeltaResolver).GetMethod(nameof(Run), BindingFlags.NonPublic | BindingFlags.Static);
 
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                foreach (var type in GetTypesSafe(assembly)) {
+            foreach (var assembly in AssemblyScanning.ScannableAssemblies()) {
+                foreach (var type in AssemblyScanning.LoadableTypes(assembly)) {
                     if (!type.IsClass || type.IsAbstract)
                         continue;
 
@@ -113,22 +114,6 @@ namespace Spellbound.Core.ObjectData {
                         Table[key] = (DeltaApply)closed?.CreateDelegate(typeof(DeltaApply));
                     }
                 }
-            }
-        }
-
-        private static IEnumerable<Type> GetTypesSafe(Assembly assembly) {
-            try {
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException e) {
-                var loaded = new List<Type>();
-
-                foreach (var type in e.Types) {
-                    if (type != null)
-                        loaded.Add(type);
-                }
-
-                return loaded;
             }
         }
     }

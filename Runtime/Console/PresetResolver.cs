@@ -16,6 +16,9 @@ namespace Spellbound.Core.Console {
 
         private static bool _isInitialized;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetForPlaySession() => Clear();
+
         /// <summary>
         /// Initializes the preset registry by scanning all ObjectPresets with ConsoleModules.
         /// </summary>
@@ -29,11 +32,10 @@ namespace Spellbound.Core.Console {
         }
 
         /// <summary>
-        /// Scans all ObjectPresets in Resources and registers any with ConsoleModules.
-        /// This likely needs to become more flexible, but I think it is a good working prototype.
+        /// Registers every preset already discovered by PresetRegistry, avoiding a second Resources scan.
         /// </summary>
         private static void RegisterAllPresets() {
-            var allPresets = Resources.LoadAll<ObjectPreset>("");
+            var allPresets = PresetRegistry.All;
             var registeredCount = 0;
 
             foreach (var preset in allPresets) {
