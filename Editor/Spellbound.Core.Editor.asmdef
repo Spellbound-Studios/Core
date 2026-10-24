@@ -2,7 +2,8 @@
     "name": "Spellbound.Core.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:c14a5db03514b8d4ba10b621ed3627d5"
+        "GUID:c14a5db03514b8d4ba10b621ed3627d5",
+        "Spellbound.Core.WorldObjects"
     ],
     "includePlatforms": [
         "Editor"
