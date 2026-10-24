@@ -1,7 +1,9 @@
 ﻿// Copyright 2026 Spellbound Studio Inc.
 
-using UnityEditor;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Spellbound.Core.Tooling {
     /// <summary>

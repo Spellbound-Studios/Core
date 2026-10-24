@@ -3,6 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Spellbound.Core",
+        "Spellbound.Core.WorldObjects",
+        "Spellbound.Core.Console",
         "Unity.Collections",
         "Unity.Entities",
         "Unity.Mathematics",
