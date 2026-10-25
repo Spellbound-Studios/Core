@@ -5,6 +5,8 @@
         "Spellbound.Core",
         "Spellbound.Core.WorldObjects",
         "Spellbound.Core.Console",
+        "Spellbound.Core.Editor",
+        "Spellbound.Fixture.Other",
         "Spellbound.Core.Tests.OperationFixture",
         "Spellbound.Core.Tests.OperationFixture.Second",
         "Unity.Collections",

@@ -1,0 +1,38 @@
+{
+    "name": "Spellbound.Core.Pipeline.Tests",
+    "rootNamespace": "",
+    "references": [
+        "Spellbound.Core",
+        "Spellbound.Core.Pipeline",
+        "Spellbound.Core.Tests.OperationFixture",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS",
+        "SPELLBOUND_PIPELINE_0_8 || SPELLBOUND_PIPELINE_0_9"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.pipeline",
+            "expression": "[0.8.0-exp.1,0.9.0-exp.1)",
+            "define": "SPELLBOUND_PIPELINE_0_8"
+        },
+        {
+            "name": "com.unity.pipeline",
+            "expression": "[0.9.0-exp.1,0.10.0-exp.1)",
+            "define": "SPELLBOUND_PIPELINE_0_9"
+        }
+    ],
+    "noEngineReferences": false
+}

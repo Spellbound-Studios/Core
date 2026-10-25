@@ -59,6 +59,10 @@ namespace Spellbound.Core.Operations {
             var pipeline = GraphicsSettings.currentRenderPipeline;
             builder.Append("\nrender pipeline: ").Append(pipeline != null ? pipeline.name : "built-in");
 
+            foreach (var package in InstalledPackages.All()) {
+                builder.Append('\n').Append(package.Line);
+            }
+
             foreach (var group in context.Host.Catalog.Groups) {
                 builder.Append('\n').Append(group.Name).Append(": ").Append(group.Operations.Count).Append(" operations in ")
                     .Append(string.Join(", ", group.Assemblies));

@@ -1,0 +1,30 @@
+{
+    "name": "Spellbound.Core.Pipeline",
+    "rootNamespace": "",
+    "references": [
+        "Spellbound.Core",
+        "Unity.Pipeline.Attributes"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "SPELLBOUND_PIPELINE_0_8 || SPELLBOUND_PIPELINE_0_9"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.pipeline",
+            "expression": "[0.8.0-exp.1,0.9.0-exp.1)",
+            "define": "SPELLBOUND_PIPELINE_0_8"
+        },
+        {
+            "name": "com.unity.pipeline",
+            "expression": "[0.9.0-exp.1,0.10.0-exp.1)",
+            "define": "SPELLBOUND_PIPELINE_0_9"
+        }
+    ],
+    "noEngineReferences": false
+}
