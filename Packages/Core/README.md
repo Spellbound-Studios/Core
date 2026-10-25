@@ -37,6 +37,8 @@ Debug.Log(run.Result.Text);
 - Teach the line a new argument type with a class marked `[ArgumentParser]` that implements `IArgumentParser<T>`; change how a returned value becomes text with `[ResultRenderer]` and `IResultRenderer`. Both are found in marked assemblies, so there is no startup call.
 - `core help`, `core help --group <name>`, `core about`, `core history` and `core stats` ship with Core.
 - `OperationSettings` is optional. Create it with Create > Spellbound > Operation Settings under a `Resources` folder to switch on tracing, disable groups or change the limits.
+- With `com.unity.pipeline` installed, the Unity command line runs any line through one command: `unity command spellbound_run --line "core help"` (Pipeline 0.9 spells it `unity command spellbound run`; find it with `unity command --query spellbound`). A line that does not bind, fails or is refused comes back as a command failure whose message starts with the status word; pass `--result-only` to keep the result's line breaks. The bridge compiles only for the Pipeline versions its assembly definition names, and Core.Editor writes one console line when the installed Pipeline is outside them.
+- Every package ships `AGENTS.md` at its root with the headings Purpose, Front door, Rules, Not for, Gaps and Ledger. `core context` lists the installed packages; `core context --package <group>` prints one package's file with its generated operation block refreshed; `core context-install --target Skill` (or `Agents`, `Claude`) writes the stub that tells an agent how to reach the packages; `core ledger` prints every package's Ledger rows.
 
 ---
 
