@@ -1,3 +1,13 @@
+## [Unreleased]
+
+- Operations in `Spellbound.Core.Operations`: one way for every package to declare what a person or an agent can call. An assembly carries `[assembly: OperationGroup(name, job)]`, a public static method on a public static class carries `[Operation(name, description, effect)]` with an optional `Audience` and `Availability`, and each parameter may carry `[Argument(description)]`. The three marker attributes derive from `UnityEngine.Scripting.PreserveAttribute`, so a marked method, parser or renderer survives managed code stripping at every level with no extra attribute.
+- `OperationCatalog` finds the groups and operations of every marked assembly at first use, merges a package's second assembly into its group, keeps the first of two operations with one name and the first of two groups with one name and a different job, and gives every operation a stable `Identifier` (FNV-1a of `group.name`). Instances register live operations with `Register` and leave with `Unregister`.
+- `OperationHost` runs a line: `Run(line, caller)`, `Run(line, caller, placeholders)`, `RunAll(lines, caller)` and `Run(invocation, caller)`. It tokenises, fills `{placeholders}` after tokenising, resolves a group or a unique short name, binds named and positional arguments with defaults, checks availability, the caller's audience and the effect gate (`Destroys` needs `--confirm`; `--dry-run` answers `previewed:`), invokes, renders, cuts long results and records history, per-operation statistics and an optional trace through Core's logger.
+- `OperationRun` derives from `CustomYieldInstruction`, completes now or when a returned `Task` completes, and exposes `Result`, `Results`, progress `Lines` and `AsTask()`. `OperationResult` carries a status (`succeeded`, `invalid`, `failed`, `refused`, `previewed`) as the first word of its text, a severity and the returned value. `OperationTable` renders aligned columns. `OperationException(message, hint)` is the refusal an operation raises.
+- Argument parsers: integers, numbers, booleans, enums with legal values echoed, vectors, quaternions, colours, lists and arrays, `scene:/Path` for scene objects, `asset:` references in the editor, and any consumer type through `IArgumentParser<T>` or `IArgumentTypeParser` marked `[ArgumentParser]`. Result renderers through `IResultRenderer` marked `[ResultRenderer]`.
+- `OperationSettings`, an optional asset under `Resources`: a trace toggle, disabled groups, the audiences the command line bridge holds, the maximum line length, result lines and history entries.
+- Built-in operations in the group `core`: `help`, `about`, `history`, `stats`. `CoreKit.Operations` is the default host, reset on play mode entry.
+
 ## [1.1.9] - 10/18/2026
 
 - `UnityLogCapture` routes `Debug.Log`, warnings, errors and exceptions through the Spellbound sinks, enabled per `LogConfig` with **Capture Unity Log**. Console output produced by a sink is never captured back.
@@ -51,4 +61,4 @@
 ### First Release
 
 - Package to git
-- Package import into other Unity projects
+- Package import into other Unity projects
