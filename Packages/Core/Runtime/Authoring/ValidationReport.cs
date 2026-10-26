@@ -46,6 +46,18 @@ namespace Spellbound.Core.Authoring {
             _findings.AddRange(other._findings);
         }
 
+        public void StampCheck(int fromIndex, string check) {
+            if (fromIndex < 0) {
+                throw new ArgumentOutOfRangeException(nameof(fromIndex), fromIndex, "A finding index is zero or more.");
+            }
+
+            for (var index = fromIndex; index < _findings.Count; index++) {
+                if (_findings[index].Check == null) {
+                    _findings[index] = _findings[index].WithCheck(check);
+                }
+            }
+        }
+
         public int Count(FindingSeverity severity) {
             var count = 0;
 

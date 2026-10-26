@@ -1,0 +1,32 @@
+name: unity ledger
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+      - beta
+      - main
+    paths:
+      - ProjectSettings/ProjectVersion.txt
+      - Packages/manifest.json
+      - Packages/packages-lock.json
+      - Assets/_Project/Ledger/**
+      - Packages/*/AGENTS.md
+  pull_request:
+    paths:
+      - ProjectSettings/ProjectVersion.txt
+      - Packages/manifest.json
+      - Packages/packages-lock.json
+      - Assets/_Project/Ledger/**
+      - Packages/*/AGENTS.md
+permissions:
+  contents: read
+jobs:
+  check:
+    if: ${{ vars.UNITY_RUNNER_LABEL != '' }}
+    runs-on: ${{ vars.UNITY_RUNNER_LABEL }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: run the Unity ledger check
+        shell: bash
+        run: bash scripts/unity-ledger.sh

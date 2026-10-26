@@ -114,6 +114,7 @@ namespace Spellbound.Core.Authoring.Editor {
 
             foreach (var check in _checks.For(asset.GetType())) {
                 checks.Add(check.Label);
+                var countBefore = report.Findings.Count;
                 watch.Restart();
 
                 try {
@@ -124,6 +125,7 @@ namespace Spellbound.Core.Authoring.Editor {
                         check.Name + " threw " + exception.GetType().Name + ": " + exception.Message);
                 }
 
+                report.StampCheck(countBefore, check.Label);
                 timings.Add(new ValidationTiming(check.Label, subject, watch.Elapsed.TotalMilliseconds));
             }
 

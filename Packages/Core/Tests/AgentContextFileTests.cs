@@ -31,5 +31,18 @@ namespace Spellbound.Core.Tests {
             CollectionAssert.AreEqual(new[] { "Builds on `UnityEngine.Pool.ObjectPool<T>`: pooling.", "Moved `Thing` to Spellbound.Other." }, AgentContextFile.LedgerRows(Sample));
             Assert.IsNull(AgentContextFile.LedgerRows("## Purpose\n\nx"));
         }
+
+        [Test]
+        public void LedgerRowsRenderTableRowsBesideBullets() {
+            var text = "## Ledger\r\n\r\n- Builds on `UnityEngine.Pool.ObjectPool<T>`: pooling.\r\n\r\n"
+                       + "| Id | Ours | Ours (type) | Unity item | Verdict | Judged at | Reason | Evidence "
+                       + "| Watch packages | Watch words |\r\n|---|---|---|---|---|---|---|---|---|---|\r\n"
+                       + "| U-004 | Core ObjectPool | | UnityEngine.Pool.ObjectPool | Moved | 6000.4 | r | e | | |\r\n";
+
+            CollectionAssert.AreEqual(new[] {
+                "Builds on `UnityEngine.Pool.ObjectPool<T>`: pooling.",
+                "U-004 Core ObjectPool: Moved (UnityEngine.Pool.ObjectPool)"
+            }, AgentContextFile.LedgerRows(text));
+        }
     }
 }
