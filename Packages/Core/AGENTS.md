@@ -15,14 +15,20 @@ Debug.Log(run.Result.Text);
 
 A package declares what an agent or a person can call with `[assembly: OperationGroup(name, job)]` on its assembly and `[Operation(name, description, effect)]` on a public static method, each parameter described by `[Argument(description)]`. The same declaration serves C#, a console, the Spellbound window and the Unity command line, where `spellbound_run` takes one operation line. `core context --package <group>` prints a package's own context with its operations. The generated text below is refreshed from the live catalog by `core context`.
 
-<!-- spellbound:operations 2a658ffe -->
+A definition a designer or an agent authors is a ScriptableObject that implements `IAuthoredDefinition` and adds its findings to a `ValidationReport` (`Error`, `Warning`, `Information`, each with a code `<package>.<kebab-name>`). Core.Editor runs it: `core validate` over an asset, a folder, a package folder, the drafts folder or everything, `core preview`, `core drafts` and `core approve`. A package adds a check to a definition another package owns by implementing `IDefinitionCheck<T>` in its own editor assembly and marking the class `[RegisteredDefinitionCheck("<package>.<kebab-name>")]`; a `DefinitionPreviewer<T>` in that assembly draws its summary. A report is the status line, then `checks:` naming what ran as `<name> (<Package>)`, then one finding per line, code first.
+
+<!-- spellbound:operations ea3ed1d7 -->
 com.spellboundstudios.core 1.1.9
 Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core about`: Describes this process: the Unity version, the render pipeline and the operation groups it holds. [reads, anyone]
+- `core approve --target <scriptable-object> --to <text>`: Moves a draft out of the drafts folder into the project, keeping its GUID; refused while the draft has an error finding. [writes, approver]
+  - `--target`: The draft, as asset:<path> or asset:<name>.
+  - `--to`: The folder under Assets the approved asset moves to.
 - `core context [--package <text>]`: Lists the installed Spellbound packages with their front doors and operations, or prints one package's agent context with its generated blocks refreshed. [reads, anyone]
   - `--package`: The operation group or package id to print in full; leave it out to list every package. Default: none.
 - `core context-install --target <one of Skill, Agents, Claude>`: Writes the stub that tells an agent how to reach the installed packages: a skill file, or a block in the project's AGENTS.md or CLAUDE.md. [writes, developer]
   - `--target`: Skill writes .claude/skills/spellbound/SKILL.md; Agents and Claude write one delimited block into AGENTS.md or CLAUDE.md at the project root.
+- `core drafts`: Lists the definitions waiting in the drafts folder with the state of their report. [reads, developer]
 - `core help [--group <text>] [--all <true or false> = false]`: Lists the operation groups, or the operations of one group with their arguments. [reads, anyone]
   - `--group`: The group to list; leave it out to list every group. Default: none.
   - `--all`: True to list every operation of every group. Default: false.
@@ -30,7 +36,13 @@ Operations of the group `core`, run as `<group> <operation> [arguments]`:
   - `--offset`: How many entries to skip from the start. Default: 0.
   - `--limit`: How many entries to list. Default: 50.
 - `core ledger`: Lists every installed Spellbound package's Ledger rows: the Unity types it builds on and what moved out of it. [reads, anyone]
+- `core preview --target <scriptable-object>`: Describes an authored definition: its previewer's summary and pictures, and the lines every registered check contributes. [reads, anyone]
+  - `--target`: The definition asset, as asset:<path> or asset:<name>.
 - `core stats`: Lists each operation this host has run with its calls, failures and durations in milliseconds. [reads, developer]
+- `core validate [--path <text>] [--drafts <true or false> = false] [--timings <true or false> = false]`: Validates authored definitions: one asset, a folder, a package folder, the drafts folder or everything that implements the contract, and writes the one report with its checks line. [reads, anyone]
+  - `--path`: An asset path, a folder under Assets, or a package folder as Packages/<id> or Packages/<Name>; leave it out to validate everything. Default: none.
+  - `--drafts`: True to validate the drafts folder named in OperationSettings. Default: false.
+  - `--timings`: True to append a table with the milliseconds each validator and check took. Default: false.
 <!-- /spellbound:operations -->
 
 ## Rules
@@ -43,6 +55,7 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 - An operation that could outlast a domain reload is a `<name>-start` and `<name>-status` pair; an operation never opens a modal dialog.
 - Nothing per frame or per tick goes through an operation: the host reflects, parses and allocates per call.
 - `OperationSettings` is optional. Every field has a default, so no asset is required; the field `bridgeAudiences` is the one setting that grants the audience `approver` to an agent on the Unity command line.
+- `core approve` needs the audience `approver` and is refused while the draft has an error finding; a draft lives in `OperationSettings.draftsFolder` (default `Assets/Drafts`) and every path an authoring operation writes is under `Assets` or `Library/Spellbound`.
 
 ## Not for
 
@@ -52,7 +65,9 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 
 ## Gaps
 
-- `core validate`, `core preview`, `core drafts`, `core revise` and `core approve` are not built yet; authored content is validated only by its own inspector until the authoring contract lands.
+- `core revise` and the authored-key scan (`core.unknown-key`) are not built yet; a draft is made new, and a renamed field is re-authored.
+- The inspector banner shows a definition's last report and runs the full set on a save or from its button; it does not yet revalidate while a person edits.
+- Validation timings stay on the run (`core validate --timings`) until the observation model exists.
 - `core observations` waits for the observation model; `core stats` reads the host's own tally of calls, failures and durations.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
 

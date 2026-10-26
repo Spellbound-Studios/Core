@@ -9,6 +9,7 @@
         "Spellbound.Fixture.Other",
         "Spellbound.Core.Tests.OperationFixture",
         "Spellbound.Core.Tests.OperationFixture.Second",
+        "Spellbound.Core.Tests.AuthoringFixture",
         "Unity.Collections",
         "Unity.Entities",
         "Unity.Mathematics",
