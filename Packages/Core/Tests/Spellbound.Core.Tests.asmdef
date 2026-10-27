@@ -10,6 +10,8 @@
         "Spellbound.Core.Tests.OperationFixture",
         "Spellbound.Core.Tests.OperationFixture.Second",
         "Spellbound.Core.Tests.AuthoringFixture",
+        "Spellbound.Core.Testing",
+        "Unity.Burst",
         "Unity.Collections",
         "Unity.Entities",
         "Unity.Mathematics",

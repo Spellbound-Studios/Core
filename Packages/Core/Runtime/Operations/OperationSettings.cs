@@ -7,6 +7,7 @@ namespace Spellbound.Core.Operations {
     public class OperationSettings : ScriptableObject {
         public const string ResourceName = "OperationSettings";
         public const string DefaultDraftsFolder = "Assets/Drafts";
+        public const string DefaultLedgerFolder = "Assets/_Project/Ledger";
 
         public bool trace;
         public string[] disabledGroups = System.Array.Empty<string>();
@@ -15,6 +16,7 @@ namespace Spellbound.Core.Operations {
         public int maximumResultLines = 200;
         public int maximumHistoryEntries = 1000;
         public string draftsFolder = DefaultDraftsFolder;
+        public string ledgerFolder = DefaultLedgerFolder;
 
         public static OperationSettings Load() {
             var loaded = Resources.Load<OperationSettings>(ResourceName);

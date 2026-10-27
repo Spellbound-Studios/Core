@@ -1,7 +1,8 @@
-﻿// Copyright 2026 Spellbound Studio Inc.
+// Copyright (c) Spellbound Studios. All rights reserved.
 
 using System;
 using System.Collections.Generic;
+using Spellbound.Core.Controls.Editor;
 using Spellbound.Core.Modules;
 using Spellbound.Core.Objects;
 using UnityEditor;
@@ -10,14 +11,8 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Spellbound.Core {
-    /// <summary>
-    /// UI Toolkit inspector for <see cref="ObjectPreset"/>. Renders the default fields, then a custom block of
-    /// surface modules where each surface is a card containing a header (name + remove button) and a list of
-    /// <see cref="PresetModule"/>s. Module rows route to whatever <c>CustomPropertyDrawer</c> is registered for
-    /// the concrete module type — that's how DamageableModule's bespoke layout shows up.
-    /// </summary>
     [CustomEditor(typeof(ObjectPreset))]
-    public sealed class ObjectPresetEditor : Editor {
+    public sealed class ObjectPresetEditor : UnityEditor.Editor {
         private const string FieldSurfaceModules = "surfaceModules";
         private const string FieldPresetModules = "presetModules";
         private const string FieldSurfaceName = "surfaceName";
@@ -43,7 +38,7 @@ namespace Spellbound.Core {
 
             if (surfacesProp == null) {
                 root.Add(new HelpBox(
-                    $"ObjectPreset has no '{FieldSurfaceModules}' field — editor field name has drifted.",
+                    $"ObjectPreset has no '{FieldSurfaceModules}' field: editor field name has drifted.",
                     HelpBoxMessageType.Error));
 
                 return root;
@@ -105,39 +100,17 @@ namespace Spellbound.Core {
             var nameProp = surfaceProp.FindPropertyRelative(FieldSurfaceName);
             var modulesProp = surfaceProp.FindPropertyRelative(FieldPresetModules);
 
-            var surfaceAccent = new Color(0.4f, 0.6f, 0.9f);
-
-            var card = new VisualElement {
+            var card = new SectionCard(nameProp.stringValue) {
                 style = {
-                    borderLeftWidth = 4,
-                    borderLeftColor = surfaceAccent,
-                    borderTopWidth = 1,
-                    borderRightWidth = 1,
-                    borderBottomWidth = 1,
-                    borderTopColor = new Color(surfaceAccent.r, surfaceAccent.g, surfaceAccent.b, 0.3f),
-                    borderRightColor = new Color(surfaceAccent.r, surfaceAccent.g, surfaceAccent.b, 0.3f),
-                    borderBottomColor = new Color(surfaceAccent.r, surfaceAccent.g, surfaceAccent.b, 0.3f),
-                    backgroundColor = new Color(0f, 0f, 0f, 0.04f),
-                    paddingTop = 8,
-                    paddingBottom = 8,
-                    paddingLeft = 10,
-                    paddingRight = 10,
                     marginBottom = 12
                 }
             };
 
-            var header = new VisualElement {
-                style = {
-                    flexDirection = FlexDirection.Row,
-                    alignItems = Align.Center,
-                    marginBottom = 4
-                }
-            };
+            card.TrackPropertyValue(nameProp, renamed => card.Title = renamed.stringValue);
 
             var nameField = new PropertyField(nameProp, $"Surface {index}");
-            nameField.style.flexGrow = 1;
             nameField.Bind(serializedObject);
-            header.Add(nameField);
+            card.Add(nameField);
 
             var removeSurfaceBtn = new Button(() => {
                 surfacesProp.DeleteArrayElementAtIndex(capturedIndex);
@@ -151,8 +124,7 @@ namespace Spellbound.Core {
                 }
             };
 
-            header.Add(removeSurfaceBtn);
-            card.Add(header);
+            card.Header.Add(removeSurfaceBtn);
 
             var modulesContainer = new VisualElement {
                 style = {
@@ -257,9 +229,6 @@ namespace Spellbound.Core {
                 return row;
             }
 
-            // PropertyField for the managed-reference element. If a CustomPropertyDrawer is registered for the
-            // concrete module type, its CreatePropertyGUI runs here. Otherwise Unity's default UI Toolkit
-            // rendering shows the fields.
             var moduleField = new PropertyField(moduleProp, string.Empty);
             moduleField.Bind(serializedObject);
             row.Add(moduleField);
@@ -339,4 +308,4 @@ namespace Spellbound.Core {
             return v;
         }
     }
-}
+}

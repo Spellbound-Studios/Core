@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Spellbound.Core.Controls.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -11,15 +12,9 @@ namespace Spellbound.Core.Authoring.Editor {
     public static class DefinitionInspectorBanner {
         public const string InspectorWindowTypeName = "UnityEditor.InspectorWindow";
         public const string ElementName = "spellbound-definition-banner";
-        public const string ClassName = "spellbound-definition-banner";
-        public const string HeaderClassName = ClassName + "__header";
-        public const string TitleClassName = ClassName + "__title";
-        public const string ButtonClassName = ClassName + "__run";
-        public const string FindingClassName = ClassName + "__finding";
-        public const string ErrorClassName = FindingClassName + "--error";
-        public const string WarningClassName = FindingClassName + "--warning";
-        public const string InformationClassName = FindingClassName + "--information";
+        public const string ClassName = "sb-definition-banner";
         public const string RunChecksText = "Run checks";
+        public const string NotRunText = "Validation: not run yet";
 
         private static readonly HashSet<string> Pending = new HashSet<string>(StringComparer.Ordinal);
 
@@ -66,67 +61,21 @@ namespace Spellbound.Core.Authoring.Editor {
         }
 
         private static void Fill(VisualElement banner, ScriptableObject asset, string path) {
+            var expanded = banner.Q<ReportView>() is { Compact: false };
             banner.Clear();
-            var header = new VisualElement();
-            header.AddToClassList(HeaderClassName);
-            header.style.flexDirection = FlexDirection.Row;
-            header.style.justifyContent = Justify.SpaceBetween;
-            header.style.alignItems = Align.Center;
-            var title = new Label();
-            title.AddToClassList(TitleClassName);
-            header.Add(title);
-            var button = new Button(() => Run(asset)) { text = RunChecksText };
-            button.AddToClassList(ButtonClassName);
-            header.Add(button);
+            var header = new HeaderBar(NotRunText);
+            header.Add(new Button(() => Run(asset)) { text = RunChecksText });
             banner.Add(header);
 
             if (!DefinitionReportCache.TryGet(path, out var run)) {
-                title.text = "Validation: not run yet";
                 ScheduleFirstRun(asset, path);
                 return;
             }
 
-            title.text = "Validation at " + run.Finished.ToString("HH:mm:ss") + ": " + run.Report.Summary();
-
-            foreach (var finding in run.Report.Ordered()) {
-                var line = new Label(FindingText(finding));
-                line.AddToClassList(FindingClassName);
-                line.AddToClassList(ClassFor(finding.Severity));
-                line.style.whiteSpace = WhiteSpace.Normal;
-                line.tooltip = finding.ToText();
-                banner.Add(line);
-            }
-
-            var checks = new Label(run.ChecksLine());
-            checks.style.whiteSpace = WhiteSpace.Normal;
-            banner.Add(checks);
-        }
-
-        private static string FindingText(ValidationFinding finding) {
-            var text = ValidationFinding.SeverityWord(finding.Severity) + " " + finding.Code;
-
-            if (finding.Location != null) {
-                text += " at " + finding.Location;
-            }
-
-            text += ": " + finding.Message;
-
-            if (finding.Hint != null) {
-                text += " (" + finding.Hint + ")";
-            }
-
-            return text;
-        }
-
-        private static string ClassFor(FindingSeverity severity) {
-            switch (severity) {
-                case FindingSeverity.Error:
-                    return ErrorClassName;
-                case FindingSeverity.Warning:
-                    return WarningClassName;
-                default:
-                    return InformationClassName;
-            }
+            header.Title = "Validation at " + run.Finished.ToString("HH:mm:ss");
+            var view = new ReportView { Compact = !expanded };
+            view.Bind(run);
+            banner.Add(view);
         }
 
         private static void ScheduleFirstRun(ScriptableObject asset, string path) {

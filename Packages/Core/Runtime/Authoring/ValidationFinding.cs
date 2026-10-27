@@ -16,10 +16,11 @@ namespace Spellbound.Core.Authoring {
         public string Hint { get; }
         public string FixCode { get; }
         public IReadOnlyDictionary<string, string> NamedHints { get; }
+        public string Check { get; }
 
         public ValidationFinding(string code, FindingSeverity severity, string subject, string message,
             string location = null, string hint = null, string fixCode = null,
-            IReadOnlyDictionary<string, string> namedHints = null) {
+            IReadOnlyDictionary<string, string> namedHints = null, string check = null) {
             if (!IsCode(code)) {
                 throw new ArgumentException("A finding code is <package>.<kebab-name> in lower case; '" + code + "' is not.",
                     nameof(code));
@@ -37,10 +38,15 @@ namespace Spellbound.Core.Authoring {
             Hint = string.IsNullOrWhiteSpace(hint) ? null : hint.Trim();
             FixCode = string.IsNullOrWhiteSpace(fixCode) ? null : fixCode.Trim();
             NamedHints = namedHints ?? NoHints;
+            Check = string.IsNullOrWhiteSpace(check) ? null : check.Trim();
         }
 
         public ValidationFinding WithSubject(string subject) {
-            return new ValidationFinding(Code, Severity, subject, Message, Location, Hint, FixCode, NamedHints);
+            return new ValidationFinding(Code, Severity, subject, Message, Location, Hint, FixCode, NamedHints, Check);
+        }
+
+        public ValidationFinding WithCheck(string check) {
+            return new ValidationFinding(Code, Severity, Subject, Message, Location, Hint, FixCode, NamedHints, check);
         }
 
         public static bool IsCode(string code) {

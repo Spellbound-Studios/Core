@@ -44,6 +44,16 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void ARegisteredCheckStampsItsLabelOnItsFindingsAndTheOwnValidationStampsNothing() {
+            var asset = _folder.Create("Stamped", string.Empty, 250);
+            var run = _runner.ValidateAsset(asset);
+            Assert.AreEqual(FixtureDefinition.TitleEmptyCode, run.Report.Findings[0].Code);
+            Assert.IsNull(run.Report.Findings[0].Check);
+            Assert.AreEqual("fixturecheck.threshold-high", run.Report.Findings[1].Code);
+            Assert.AreEqual("fixturecheck.threshold-high (Core)", run.Report.Findings[1].Check);
+        }
+
+        [Test]
         public void TheTextIsTheSummaryTheChecksLineThenTheFindings() {
             var asset = _folder.Create("Fine", "fine", 5);
             var text = _runner.ValidateAsset(asset).ToText();
