@@ -17,7 +17,9 @@ A package declares what an agent or a person can call with `[assembly: Operation
 
 A definition a designer or an agent authors is a ScriptableObject that implements `IAuthoredDefinition` and adds its findings to a `ValidationReport` (`Error`, `Warning`, `Information`, each with a code `<package>.<kebab-name>`). Core.Editor runs it: `core validate` over an asset, a folder, a package folder, the drafts folder or everything, `core preview`, `core drafts` and `core approve`. A package adds a check to a definition another package owns by implementing `IDefinitionCheck<T>` in its own editor assembly and marking the class `[RegisteredDefinitionCheck("<package>.<kebab-name>")]`; a `DefinitionPreviewer<T>` in that assembly draws its summary. A report is the status line, then `checks:` naming what ran as `<name> (<Package>)`, then one finding per line, code first.
 
-<!-- spellbound:operations ea3ed1d7 -->
+A package declares what it is once, in the `Identity.asset` at its root, a `PackageIdentity`: its kind, layer, status, one-sentence job and front door, what it must not own, and the switches its checks read. `PackageIdentity.JudgmentFields` names the fields a code owner reviews; `PackageIdentity.Find(folder)` loads it. The Spellbound window (`SpellboundWindow`, Window, Spellbound) draws the pages other packages register: a class deriving from `WindowPage` marked `[WindowPage(title, order)]` appears there with no change to Core.
+
+<!-- spellbound:operations fed72c95 -->
 com.spellboundstudios.core 1.1.9
 Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core about`: Describes this process: the Unity version, the render pipeline and the operation groups it holds. [reads, anyone]
@@ -39,11 +41,31 @@ Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core preview --target <scriptable-object>`: Describes an authored definition: its previewer's summary and pictures, and the lines every registered check contributes. [reads, anyone]
   - `--target`: The definition asset, as asset:<path> or asset:<name>.
 - `core stats`: Lists each operation this host has run with its calls, failures and durations in milliseconds. [reads, developer]
+- `core unity-ledger [--move-form <true or false> = false]`: Checks every ledger of Unity systems the installed packages and this project rest on: a row whose type contradicts its verdict is wrong, a row whose editor or watched package moved past its judgement is stale, with the changelog lines that carry a watch word. [reads, anyone]
+  - `--move-form`: True to print the lines for the Move issue form instead of the report. Default: false.
 - `core validate [--path <text>] [--drafts <true or false> = false] [--timings <true or false> = false]`: Validates authored definitions: one asset, a folder, a package folder, the drafts folder or everything that implements the contract, and writes the one report with its checks line. [reads, anyone]
   - `--path`: An asset path, a folder under Assets, or a package folder as Packages/<id> or Packages/<Name>; leave it out to validate everything. Default: none.
   - `--drafts`: True to validate the drafts folder named in OperationSettings. Default: false.
   - `--timings`: True to append a table with the milliseconds each validator and check took. Default: false.
 <!-- /spellbound:operations -->
+
+<!-- spellbound:depends 45527832 -->
+Depends on:
+- `com.unity.entities` 1.3.14
+- `com.unity.entities.graphics` 1.3.14
+- `com.unity.mathematics` 1.3.2
+- `com.unity.burst` 1.8.19
+- `com.unity.collections` 2.5.7
+- `com.unity.inputsystem` 1.11.2
+- `com.unity.ugui` 2.0.0
+Bridges, each compiled only when its package is installed:
+- `Spellbound.Core.Pipeline` when `com.unity.pipeline` is in [0.8.0-exp.1,0.9.0-exp.1)
+- `Spellbound.Core.Pipeline` when `com.unity.pipeline` is in [0.9.0-exp.1,0.10.0-exp.1)
+<!-- /spellbound:depends -->
+
+<!-- spellbound:pipeline 916d3b95 -->
+Agents run these operation lines from the Unity command line when `com.unity.pipeline` is installed in [0.8.0-exp.1,0.9.0-exp.1) or [0.9.0-exp.1,0.10.0-exp.1): find the command with `unity command --query spellbound` and pass it one line.
+<!-- /spellbound:pipeline -->
 
 ## Rules
 
@@ -70,6 +92,8 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 - Validation timings stay on the run (`core validate --timings`) until the observation model exists.
 - `core observations` waits for the observation model; `core stats` reads the host's own tally of calls, failures and durations.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
+- The Spellbound window holds no page of Core's own yet: the Line, Package, Operations and Drafts pages are not built.
+- The logger registers its sinks when play mode starts, so a line logged from editor code outside play mode reaches no sink unless the caller adds a scoped one.
 
 ## Ledger
 
@@ -82,8 +106,8 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 | U-007 | Core logger and sinks | `Spellbound.Core.Logging.Log` | Debug.unityLogger, the Logging package | Keeps | 6000.4 | The Logging package is deprecated from 6.3 and Unity says the default logging covers most uses; our sinks, tallies and levels sit on Debug. | S27 | | Debug.unityLogger; Logging package; deprecated |
 | U-008 | Core observation model | | ProfilerRecorder, ProfilerCounterValue, FrameTimingManager | Builds on | 6000.4 | Unity compiles Profiler counters out of non-development builds, so Core keeps its own counters and mirrors them to Profiler counters in development builds only; FrameTimingManager works in release builds when Frame Timing Stats is on. Not built yet, area 3 builds it. | S14; S15 | | ProfilerRecorder; ProfilerCounterValue; FrameTimingManager |
 | U-016 | Core sample import operation (Line rule 8) | | UnityEditor.PackageManager.UI.Sample.FindByPackage and Import | Builds on | 6000.4 | The Package Manager has a C# route to import a sample into Assets, and the operation wraps it. The operation is not built yet. | S23 | | Sample.FindByPackage; Sample.Import |
-| U-017 | Spellbound window (Line rule 16) | | Package Manager | Keeps | 6000.4 | The Package Manager cannot follow a git URL from a package and cannot grey out a paid package. The window is not built yet. | Line decision 2 | | Package Manager; git URL; dependency |
-| U-018 | Core log settings inspector | `Spellbound.Core.Logging.Editor.LogConfigEditor` | UnityEditor.Editor.CreateInspectorGUI, UI Toolkit | Moved | 6000.4 | Decided 2026-10-24: the inspector is drawn with the old editor system, Unity's reference says to implement CreateInspectorGUI for a UI Toolkit inspector, and the studio sells UI Toolkit only. Area 11's epic U7b rewrites it; until it lands the check reports this row wrong, as it does for U-002. | S49; Corrections.md rule 3 | | CreateInspectorGUI; OnInspectorGUI; IMGUI |
+| U-017 | Spellbound window (Line rule 16) | | Package Manager | Keeps | 6000.4 | The Package Manager cannot follow a git URL from a package and cannot grey out a paid package. The window shell is built; its Package page is not. | Line decision 2 | | Package Manager; git URL; dependency |
+| U-018 | Core log settings inspector | `Spellbound.Core.Logging.Editor.LogConfigEditor` | UnityEditor.Editor.CreateInspectorGUI, UI Toolkit | Moved | 6000.4 | Decided 2026-10-24: the inspector was drawn with the old editor system, Unity's reference says to implement CreateInspectorGUI for a UI Toolkit inspector, and the studio sells UI Toolkit only. Rewritten 2026-10-27 as LogSettingsInspector, which implements CreateInspectorGUI. | S49; Corrections.md rule 3 | | CreateInspectorGUI; OnInspectorGUI; IMGUI |
 | U-020 | Rule 12, no domain reload dependence | | Fast Enter Play Mode default, AutoStaticsCleanup, Project Auditor UAL analyzer | Builds on | 6000.4 | Reload is on by default in 6000.4, new 6.6 projects default to reload scene only, and the attribute arrived in 6.5; packages at the 6000.3 floor keep their explicit resets and adopt the attribute when the floor reaches 6.7. Unity 7's fast Play mode keeps statics alive, so the clock is the Unity 7 timeline and Core's key registry reset stays explicit. 6.7 beta probe 2026-10-25: unchanged, with warning UAC0005 on AppDomain.GetAssemblies, and the scan still runs with domain reload off. | S29; S32; S34; S45; S52 p1; S52 p9; S52 p14; S52 p15 | | AutoStaticsCleanup; domain reload; Enter Play Mode |
 | U-021 | Runtime AppDomain assembly scans and Volumetrics' DomainUnload releases | `Spellbound.Core.Tooling.AssemblyScanning` | CoreCLR load contexts and the lifecycle attributes | Watch | 6000.4 | Unity advises CurrentAssemblies.GetLoadedAssemblies over AppDomain.GetAssemblies and says DomainUnload will no longer fire; domain reloads are gone in Unity 7. Then Moved: our one scan call switches behind versionDefines in epic U8, on the Unity 7 timeline. 6.7 beta probe 2026-10-25: unchanged, with warning UAC0005 on AssemblyScanning.cs:10, and SmartPackerRegistry registered its packers on both entries with domain reload off. | S9; S29; S30; S31; AssemblyScanning.cs:10; PipelineUtils.cs:190-197 | | Assemblies.CurrentAssemblies; GetLoadedAssemblies; DomainUnload |
 | U-043 | Core packing | `Spellbound.Core.Packing.Packer` | com.unity.serialization | Keeps | 6000.4 | Unity deprecated the package in 6.6 and suggests System.Text.Json, Odin Serializer or MemoryPack, none of which is a bit writer with stable hashes and deltas. 6.7 beta probe 2026-10-25: unsure, the copy pulls com.unity.serialization through Entities only and Core's packing does not reference it. | S31 | | Serialization package; deprecated; bit writer |
