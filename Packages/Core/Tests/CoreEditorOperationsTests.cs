@@ -51,8 +51,9 @@ namespace Spellbound.Core.Tests {
             StringAssert.Contains("\n## Purpose\n", text);
             StringAssert.Contains("\n## Ledger\n", text);
             Assert.IsTrue(GeneratedBlock.IsCurrent(text, AgentContextBlocks.OperationsBlock));
-            StringAssert.Contains("- `core context [--package <text>]`", GeneratedBlock.Body(text, AgentContextBlocks.OperationsBlock));
-            StringAssert.Contains("com.spellboundstudios.core ", GeneratedBlock.Body(text, AgentContextBlocks.OperationsBlock));
+            var body = GeneratedBlock.Body(text, AgentContextBlocks.OperationsBlock).Replace("\r\n", "\n");
+            StringAssert.Contains("- `core context [--package <text>]`", body);
+            StringAssert.StartsWith("com.spellboundstudios.core\nOperations of the group `core`", body);
         }
 
         [Test]
