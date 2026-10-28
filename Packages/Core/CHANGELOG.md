@@ -20,6 +20,7 @@
 - `PackageIdentityInspector`, the identity's inspector in UI Toolkit, grouped by what the package is, what it must not own, how it is checked and its skeleton, with every judgment field marked and the identity's own report beneath.
 - The Spellbound window shell in `Spellbound.Core.Window.Editor`: `SpellboundWindow` at Window, Spellbound; a page is a class deriving from `WindowPage` and marked `[WindowPage(title, order)]`, found by `WindowPages` through `TypeCache` (public classes only) and drawn by `WindowShell` in plain UI Toolkit with `sb-window` classes. Core registers no page of its own yet.
 - `LogSettingsInspector` replaces `LogConfigEditor`: the log settings drawn in UI Toolkit and bound to the asset, and Apply writing the level's `SPELLBOUND_LOG_*` defines for the selected build target and naming them under the button. `LogSinkDiscovery.Discover` lists the public top-level sinks with a parameterless constructor through `TypeCache` as `LogSinkDescription` values, and `AppendMissing` adds the ones a `LogConfig` lacks, disabled, once when the inspector opens. `LogLevelDefines` gives a level's defines (`For`), merges them into a target's defines keeping every other define (`Merge`), and lists the levels whose calls compile in (`CompiledLevels`), which are a sink's filter choices.
+- The operations block `core context` writes into an `AGENTS.md` names its package by id alone, without the version, so a release that only moves the version in `package.json` leaves the block current.
 
 ## [1.1.9] - 10/18/2026
 

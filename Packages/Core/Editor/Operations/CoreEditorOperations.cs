@@ -112,7 +112,7 @@ namespace Spellbound.Core.Operations.Editor {
 
             if (group != null) {
                 refreshed = GeneratedBlock.InsertUnderHeading(refreshed, AgentContextFile.FrontDoorHeading, AgentContextBlocks.OperationsBlock,
-                    AgentContextBlocks.Operations(group, package?.Line));
+                    AgentContextBlocks.Operations(group, package?.Name));
             }
 
             if (doors != null && doors.Count > 0) {

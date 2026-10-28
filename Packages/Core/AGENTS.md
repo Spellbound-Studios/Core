@@ -19,8 +19,8 @@ A definition a designer or an agent authors is a ScriptableObject that implement
 
 A package declares what it is once, in the `Identity.asset` at its root, a `PackageIdentity`: its kind, layer, status, one-sentence job and front door, what it must not own, and the switches its checks read. `PackageIdentity.JudgmentFields` names the fields a code owner reviews; `PackageIdentity.Find(folder)` loads it. The Spellbound window (`SpellboundWindow`, Window, Spellbound) draws the pages other packages register: a class deriving from `WindowPage` marked `[WindowPage(title, order)]` appears there with no change to Core.
 
-<!-- spellbound:operations fed72c95 -->
-com.spellboundstudios.core 1.1.9
+<!-- spellbound:operations bba282be -->
+com.spellboundstudios.core
 Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core about`: Describes this process: the Unity version, the render pipeline and the operation groups it holds. [reads, anyone]
 - `core approve --target <scriptable-object> --to <text>`: Moves a draft out of the drafts folder into the project, keeping its GUID; refused while the draft has an error finding. [writes, approver]
