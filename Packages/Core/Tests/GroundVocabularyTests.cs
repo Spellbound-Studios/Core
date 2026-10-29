@@ -62,7 +62,8 @@ namespace Spellbound.Core.Tests {
                 for (var index = 0; index < samples.Length; index++) {
                     Assert.AreEqual(2.5f, samples[index].Height);
                 }
-            } finally {
+            }
+            finally {
                 samples.Dispose();
             }
         }

@@ -1,4 +1,4 @@
-// Copyright (c) Spellbound Studios. All rights reserved.
+﻿// Copyright (c) Spellbound Studios. All rights reserved.
 
 using System;
 using System.Collections.Generic;

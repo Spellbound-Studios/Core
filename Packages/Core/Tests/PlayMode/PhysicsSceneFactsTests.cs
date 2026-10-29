@@ -3,6 +3,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Spellbound.Core.Logging;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -77,7 +78,7 @@ namespace Spellbound.Core.PlayModeTests {
 
             var localHeight = localBody.transform.position.y;
             var defaultHeight = defaultBody.transform.position.y;
-            Debug.Log("PhysicsSceneFactsTests: on " + Application.unityVersion + " after " + StepsToWatch
+            Log.Emit(LogLevel.Info, "PhysicsSceneFactsTests: on " + Application.unityVersion + " after " + StepsToWatch
                       + " fixed steps a body in a LocalPhysicsMode scene nobody steps sits at " + localHeight
                       + " while a body in the default scene fell to " + defaultHeight);
             Assert.AreEqual(StartHeight, localHeight, 0.001f);
@@ -113,7 +114,7 @@ namespace Spellbound.Core.PlayModeTests {
             }
 
             var height = localBody.transform.position.y;
-            Debug.Log("PhysicsSceneFactsTests: on " + Application.unityVersion
+            Log.Emit(LogLevel.Info, "PhysicsSceneFactsTests: on " + Application.unityVersion
                       + " PhysicsScene.Simulate(Time.fixedDeltaTime) from a DefaultExecutionOrder(32000) FixedUpdate"
                       + " ran " + latest.Steps + " times after a DefaultExecutionOrder(-32000) FixedUpdate each step,"
                       + " threw nothing, and the body in that scene fell from " + StartHeight + " to " + height);

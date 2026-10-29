@@ -3,13 +3,15 @@
 using System;
 using System.Diagnostics;
 using NUnit.Framework;
+using Spellbound.Core.Logging;
 using Spellbound.Core.ReferenceFrames;
+#if SPELLBOUND_CORE_TESTS_BURST
 using Unity.Burst;
+#endif
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace Spellbound.Core.Tests {
     public class UpFieldTests {
@@ -19,6 +21,7 @@ namespace Spellbound.Core.Tests {
         private const float LatticeOrigin = -6f;
         private const float Tolerance = 1e-5f;
 
+#if SPELLBOUND_CORE_TESTS_BURST
         [BurstCompile(CompileSynchronously = true)]
         private struct UpFieldEvaluationJob : IJob {
             [NativeDisableContainerSafetyRestriction]
@@ -38,6 +41,8 @@ namespace Spellbound.Core.Tests {
                 }
             }
         }
+
+#endif
 
         private sealed class PlanetUpProvider : IUpProvider {
             private readonly Vector3 _centre;
@@ -96,6 +101,16 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void ADefaultUpFieldIsWorldUp() {
+            var field = default(UpField);
+            Assert.AreEqual(UpFieldForm.WorldUp, field.Form);
+            Assert.IsFalse(field.IsConstant);
+            AssertUp(field, new Vector3(3f, 4f, 5f), Vector3.up);
+            Assert.AreEqual(UpFieldForm.Constant, UpField.WorldUp.Form);
+            Assert.AreEqual(1f, UpField.WorldUp.Y);
+        }
+
+        [Test]
         public void RadialPointsAwayFromTheCentre() {
             var field = UpField.RadialFrom(0f, 0f, 0f);
             Assert.IsFalse(field.IsConstant);
@@ -120,7 +135,8 @@ namespace Spellbound.Core.Tests {
                 AssertUp(field, new Vector3(1.5f, 0.5f, 1.5f), cell.ToVector3());
                 AssertUp(field, new Vector3(-0.1f, 0.5f, 0.5f), outside.ToVector3());
                 AssertUp(field, new Vector3(0.5f, 2f, 0.5f), outside.ToVector3());
-            } finally {
+            }
+            finally {
                 directions.Dispose();
             }
         }
@@ -130,7 +146,8 @@ namespace Spellbound.Core.Tests {
             var directions = new NativeArray<UpDirection>(7, Allocator.Temp);
             try {
                 Assert.Throws<ArgumentException>(() => new UpGrid(directions, 0f, 0f, 0f, 1f, 2, 2, 2));
-            } finally {
+            }
+            finally {
                 directions.Dispose();
             }
         }
@@ -157,19 +174,23 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual(UpFieldForm.Radial, provider.Field(default).Form);
         }
 
+#if SPELLBOUND_CORE_TESTS_BURST
         [Test]
         public void BurstJobEvaluatesEveryForm() {
             var directions = CornerDirections(Allocator.TempJob);
             var results = new NativeArray<UpDirection>(LatticeCellCount, Allocator.TempJob);
             try {
                 var grid = new UpGrid(directions, -4f, -4f, -4f, 4f, 2, 2, 2);
+                var defaultTicks = MeasureForm(default, results);
                 var constantTicks = MeasureForm(UpField.Constant(1f, 2f, 2f), results);
                 var radialTicks = MeasureForm(UpField.RadialFrom(0f, 0f, 0f), results);
                 var sampledTicks = MeasureForm(UpField.Sampled(grid, UpDirection.WorldUp), results);
-                Debug.Log("UpFieldTests: " + LatticeCellCount + " cells, constant "
+                Log.Emit(LogLevel.Info, "UpFieldTests: " + LatticeCellCount + " cells, world up "
+                                        + Milliseconds(defaultTicks) + " ms, constant "
                           + Milliseconds(constantTicks) + " ms, radial " + Milliseconds(radialTicks)
                           + " ms, sampled " + Milliseconds(sampledTicks) + " ms");
-            } finally {
+            }
+            finally {
                 directions.Dispose();
                 results.Dispose();
             }
@@ -201,5 +222,6 @@ namespace Spellbound.Core.Tests {
         private static string Milliseconds(long ticks) {
             return (ticks * 1000.0 / Stopwatch.Frequency).ToString("F4");
         }
+#endif
     }
 }
