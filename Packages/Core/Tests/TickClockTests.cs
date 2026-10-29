@@ -18,6 +18,11 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void ASourceWithADefaultRateIsRefused() {
+            Assert.Throws<ArgumentException>(() => new TickClock(new SetTickSource(default, new Tick(0))));
+        }
+
+        [Test]
         public void ClockStartsAtTheSourceTick() {
             var source = new SetTickSource(TickRate.PerSecond(20), new Tick(7));
             var clock = new TickClock(source);
@@ -67,7 +72,13 @@ namespace Spellbound.Core.Tests {
             source.Rate = TickRate.PerSecond(30);
             clock.Advance();
             clock.Advance();
+            Assert.AreEqual(1, clock.RateChanges);
+            source.Rate = TickRate.PerSecond(40);
+            clock.Advance();
             Assert.AreEqual(2, clock.RateChanges);
+            source.Rate = TickRate.PerSecond(20);
+            clock.Advance();
+            Assert.AreEqual(3, clock.RateChanges);
             Assert.AreEqual(TickRate.PerSecond(20), clock.Rate);
         }
 
@@ -95,6 +106,32 @@ namespace Spellbound.Core.Tests {
             var source = new SetTickSource(TickRate.PerSecond(20), new Tick(30));
             var clock = new TickClock(source);
             Assert.AreEqual(1.5, clock.ElapsedSeconds, 1e-9);
+        }
+
+        [Test]
+        public void ITickSource_CustomImplementation() {
+            var source = new CountingTickSource(TickRate.PerSecond(10));
+            var clock = new TickClock(source);
+            Assert.AreEqual(TickRate.PerSecond(10), clock.Rate);
+            Assert.AreEqual(new Tick(0), clock.Current);
+            Assert.IsTrue(clock.Advance());
+            Assert.AreEqual(new Tick(1), clock.Current);
+            Assert.IsTrue(clock.Advance());
+            Assert.AreEqual(new Tick(2), clock.Current);
+            Assert.AreEqual(0.2, clock.ElapsedSeconds, 1e-9);
+            Assert.AreEqual(3, source.Calls);
+        }
+
+        private sealed class CountingTickSource : ITickSource {
+            public CountingTickSource(TickRate rate) {
+                Rate = rate;
+            }
+
+            public TickRate Rate { get; }
+
+            public int Calls { get; private set; }
+
+            public Tick Current() => new Tick((ulong)Calls++);
         }
 
         private sealed class SetTickSource : ITickSource {

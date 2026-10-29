@@ -5,9 +5,17 @@ using Spellbound.Core.Logging;
 
 namespace Spellbound.Core.Simulation {
     public sealed class TickClock {
+        private TickRate _lastSourceRate;
+
         public TickClock(ITickSource source) {
             Source = source ?? throw new ArgumentNullException(nameof(source));
             Rate = source.Rate;
+
+            if (!(Rate.TicksPerSecond > 0)) {
+                throw new ArgumentException("A tick source needs a rate made by TickRate.PerSecond.", nameof(source));
+            }
+
+            _lastSourceRate = Rate;
             Current = source.Current();
         }
 
@@ -30,7 +38,8 @@ namespace Spellbound.Core.Simulation {
         public bool Advance() {
             var sourceRate = Source.Rate;
 
-            if (sourceRate != Rate) {
+            if (sourceRate != _lastSourceRate) {
+                _lastSourceRate = sourceRate;
                 RateChanges++;
 
                 if (RateChanges == 1) {

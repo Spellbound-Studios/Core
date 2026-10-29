@@ -7,15 +7,37 @@ using Unity.Collections;
 
 namespace Spellbound.Core.Tests {
     public class GoldenHashTests {
+        private const ulong LetterA = 0xaf63dc4c8601ec8cUL;
+
         [Test]
         public void EmptyHashIsTheOffsetBasis() {
             Assert.AreEqual(14695981039346656037UL, GoldenHash.Start().Value);
         }
 
         [Test]
-        public void SingleLetterMatchesTheReferenceValue() {
-            Assert.AreEqual(0xaf63dc4c8601ec8cUL, GoldenHash.Start().Append("a").Value);
-            Assert.AreEqual(0xaf63dc4c8601ec8cUL, GoldenHash.Start().Append((byte)0x61).Value);
+        public void ADefaultHashIsTheStartedHash() {
+            Assert.AreEqual(GoldenHash.Start().Value, default(GoldenHash).Value);
+            Assert.AreEqual(GoldenHash.Start().Append(5).Value, default(GoldenHash).Append(5).Value);
+            Assert.AreEqual(GoldenHash.Start().Hexadecimal, default(GoldenHash).Hexadecimal);
+        }
+
+        [Test]
+        public void SingleByteMatchesTheReferenceValue() {
+            Assert.AreEqual(LetterA, GoldenHash.Start().Append((byte)0x61).Value);
+        }
+
+        [Test]
+        public void AStringHashesItsLengthThenItsBytes() {
+            var expected = GoldenHash.Start().Append(1).Append((byte)0x61);
+            Assert.AreEqual(expected.Value, GoldenHash.Start().Append("a").Value);
+            Assert.AreEqual(0xd80d0daea7dbdd7fUL, GoldenHash.Start().Append("a").Value);
+        }
+
+        [Test]
+        public void AdjacentStringsKeepTheirBoundary() {
+            var joined = GoldenHash.Start().Append("ab");
+            var split = GoldenHash.Start().Append("a").Append("b");
+            Assert.AreNotEqual(joined.Value, split.Value);
         }
 
         [Test]
@@ -47,9 +69,11 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void NullStringHashesAsEmpty() {
-            Assert.AreEqual(GoldenHash.Start().Value, GoldenHash.Start().Append((string)null).Value);
-            Assert.AreEqual(GoldenHash.Start().Value, GoldenHash.Start().Append(string.Empty).Value);
+        public void NullAndEmptyStringsHashAlikeAndNotAsNothing() {
+            var empty = GoldenHash.Start().Append(string.Empty).Value;
+            Assert.AreEqual(empty, GoldenHash.Start().Append((string)null).Value);
+            Assert.AreEqual(GoldenHash.Start().Append(0).Value, empty);
+            Assert.AreNotEqual(GoldenHash.Start().Value, empty);
         }
 
         [Test]
@@ -60,40 +84,41 @@ namespace Spellbound.Core.Tests {
                 values[1] = -3;
                 var expected = GoldenHash.Start().Append(7).Append(-3);
                 Assert.AreEqual(expected.Value, GoldenHash.Start().Append(values).Value);
-            } finally {
+            }
+            finally {
                 values.Dispose();
             }
         }
 
         [Test]
-        public void HexIsSixteenLowerCaseDigits() {
-            Assert.AreEqual("cbf29ce484222325", GoldenHash.Start().Hex);
-            Assert.AreEqual("af63dc4c8601ec8c", GoldenHash.Start().Append("a").Hex);
+        public void HexadecimalIsSixteenLowerCaseDigits() {
+            Assert.AreEqual("cbf29ce484222325", GoldenHash.Start().Hexadecimal);
+            Assert.AreEqual("af63dc4c8601ec8c", GoldenHash.Start().Append((byte)0x61).Hexadecimal);
         }
 
         [Test]
         public void AssertionPassesOnEqualHashes() {
-            var hash = GoldenHash.Start().Append("a");
-            DeterminismAssert.GoldenHash(0xaf63dc4c8601ec8cUL, hash, "letters");
+            var hash = GoldenHash.Start().Append((byte)0x61);
+            DeterminismAssert.GoldenHash(LetterA, hash, "letters");
             DeterminismAssert.GoldenHash("af63dc4c8601ec8c", hash, "letters");
             DeterminismAssert.GoldenHash("0xAF63DC4C8601EC8C", hash, "letters");
         }
 
         [Test]
         public void AssertionThrowsWithTheRegionOnUnequalHashes() {
-            var hash = GoldenHash.Start().Append("a");
+            var hash = GoldenHash.Start().Append((byte)0x61);
             var exception = Assert.Throws<AssertionException>(
-                () => DeterminismAssert.GoldenHash(1UL, hash, "harbour"));
-            Assert.AreEqual("region 'harbour': golden 0x0000000000000001, actual 0xaf63dc4c8601ec8c",
+                () => DeterminismAssert.GoldenHash(1UL, hash, "orchard"));
+            Assert.AreEqual("region 'orchard': golden 0x0000000000000001, actual 0xaf63dc4c8601ec8c",
                 exception.Message);
         }
 
         [Test]
-        public void HexAssertionThrowsOnUnequalHashes() {
+        public void HexadecimalAssertionThrowsOnUnequalHashes() {
             var hash = GoldenHash.Start();
             var exception = Assert.Throws<AssertionException>(
-                () => DeterminismAssert.GoldenHash("af63dc4c8601ec8c", hash, "harbour"));
-            StringAssert.Contains("harbour", exception.Message);
+                () => DeterminismAssert.GoldenHash("af63dc4c8601ec8c", hash, "orchard"));
+            StringAssert.Contains("orchard", exception.Message);
         }
     }
 }
