@@ -150,6 +150,14 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void ResetGivesANewDefault() {
+            var before = WindowPages.Default;
+            Assert.AreSame(before, WindowPages.Default);
+            WindowPages.Reset();
+            Assert.AreNotSame(before, WindowPages.Default);
+        }
+
+        [Test]
         public void FindMatchesATrimmedTitleInAnyCase() {
             var pages = new WindowPages(new[] { Describe(typeof(PlainPage), "Packages", 0) });
             Assert.AreSame(pages.Pages[0], pages.Find(" packages "));

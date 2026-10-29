@@ -8,20 +8,25 @@ using UnityEngine.UIElements;
 
 namespace Spellbound.Core.Controls.Editor {
     [CustomPropertyDrawer(typeof(SerializeReferenceDropdownAttribute))]
-    public sealed class TypePickerDrawer : PropertyDrawer {
+    public class TypePickerDrawer : PropertyDrawer {
+        public const string ClassName = "sb-type-picker-drawer";
+        public const string FieldsClassName = ClassName + "__fields";
+
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
-            var root = new VisualElement();
+            var root = CreateRoot();
+            root.AddToClassList(ClassName);
+            ControlStyleSheet.Apply(root);
             var baseType = ResolveBaseType(property);
 
             if (baseType == null) {
-                root.Add(new HelpBox(property.displayName + ": the declared type of this reference does not resolve.",
-                    HelpBoxMessageType.Warning));
+                root.Add(CreateUnresolvedNotice(property));
                 return root;
             }
 
-            var picker = new TypePickerField(property.displayName, baseType);
+            var picker = CreatePicker(property.displayName, baseType);
             picker.SetValueWithoutNotify(property.managedReferenceValue?.GetType());
-            var fields = new VisualElement { style = { marginLeft = 14 } };
+            var fields = CreateFields();
+            fields.AddToClassList(FieldsClassName);
             root.Add(picker);
             root.Add(fields);
 
@@ -47,7 +52,28 @@ namespace Spellbound.Core.Controls.Editor {
             return root;
         }
 
-        private static void RebuildFields(SerializedProperty property, VisualElement fields) {
+        protected virtual VisualElement CreateRoot() {
+            return new VisualElement();
+        }
+
+        protected virtual VisualElement CreateUnresolvedNotice(SerializedProperty property) {
+            return new HelpBox(property.displayName + ": the declared type of this reference does not resolve.",
+                HelpBoxMessageType.Warning);
+        }
+
+        protected virtual TypePickerField CreatePicker(string label, Type baseType) {
+            return new TypePickerField(label, baseType);
+        }
+
+        protected virtual VisualElement CreateFields() {
+            return new VisualElement();
+        }
+
+        protected virtual VisualElement CreateField(SerializedProperty child) {
+            return new PropertyField(child);
+        }
+
+        private void RebuildFields(SerializedProperty property, VisualElement fields) {
             fields.Clear();
 
             if (property.managedReferenceValue == null) {
@@ -60,13 +86,17 @@ namespace Spellbound.Core.Controls.Editor {
 
             while (child.NextVisible(enterChildren) && !SerializedProperty.EqualContents(child, end)) {
                 enterChildren = false;
-                fields.Add(new PropertyField(child.Copy()));
+                fields.Add(CreateField(child.Copy()));
             }
 
             fields.Bind(property.serializedObject);
         }
 
         private static Type ResolveBaseType(SerializedProperty property) {
+            if (property.propertyType != SerializedPropertyType.ManagedReference) {
+                return null;
+            }
+
             var typeName = property.managedReferenceFieldTypename;
 
             if (string.IsNullOrEmpty(typeName)) {

@@ -1,19 +1,28 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Spellbound.Core.Authoring;
 using Spellbound.Core.Authoring.Editor;
 using Spellbound.Core.Controls.Editor;
+using Spellbound.Core.Operations;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Spellbound.Core.Packages.Editor {
     [CustomEditor(typeof(PackageIdentity))]
     public sealed class PackageIdentityInspector : UnityEditor.Editor {
         public const string ClassName = "sb-package-identity";
+        public const string CardClassName = ClassName + "__card";
+        public const string ReportClassName = ClassName + "__report";
+        public const string TextClassName = ClassName + "__text";
         public const string JudgmentClassName = "sb-judgment";
+        public const string JudgmentFieldClassName = JudgmentClassName + "__field";
+        public const string JudgmentBadgeClassName = JudgmentClassName + "__badge";
+        public const string JudgmentBadgeText = "Code owner";
         public const string JudgmentTooltip = "A code owner reviews every change to this field.";
         public const string PackageCardName = "spellbound-identity-package";
         public const string MustNotOwnCardName = "spellbound-identity-must-not-own";
@@ -25,8 +34,6 @@ namespace Spellbound.Core.Packages.Editor {
         public const string CheckedCardTitle = "How it is checked";
         public const string SkeletonCardTitle = "Skeleton";
 
-        private const float CardSpacing = 4f;
-
         public override VisualElement CreateInspectorGUI() {
             var identity = (PackageIdentity)target;
             var checks = new[] { PackageLabel.OwnValidation(typeof(PackageIdentity)) };
@@ -35,9 +42,10 @@ namespace Spellbound.Core.Packages.Editor {
             var layer = ChoiceFor(nameof(PackageIdentity.layer), PackageIdentity.Layers);
             var status = ChoiceFor(nameof(PackageIdentity.status), PackageIdentity.Statuses);
             var report = new ReportView { name = ReportName };
-            report.style.marginTop = CardSpacing;
+            report.AddToClassList(ReportClassName);
             var root = new VisualElement();
             root.AddToClassList(ClassName);
+            ControlStyleSheet.Apply(root);
             root.Add(header);
             root.Add(Card(PackageCardName, PackageCardTitle, TextFor(nameof(PackageIdentity.job), true), kind, layer,
                 status, TextFor(nameof(PackageIdentity.frontDoor), false)));
@@ -47,13 +55,14 @@ namespace Spellbound.Core.Packages.Editor {
                 ListFor(nameof(PackageIdentity.machineMatchedJobs))));
             root.Add(Card(SkeletonCardName, SkeletonCardTitle, IntegerFor(nameof(PackageIdentity.skeletonVersion))));
             root.Add(report);
+            var stillness = StillnessDelay();
+            IVisualElementScheduledItem pending = null;
 
             void Refresh() {
                 if (identity == null) {
                     return;
                 }
 
-                header.Title = TitleOf(identity);
                 ShowChoices(kind, PackageIdentity.Kinds, identity.kind);
                 ShowChoices(layer, PackageIdentity.Layers, identity.layer);
                 ShowChoices(status, PackageIdentity.Statuses, identity.status);
@@ -62,9 +71,14 @@ namespace Spellbound.Core.Packages.Editor {
                 report.Bind(validation, checks);
             }
 
+            void RefreshAfterStillness() {
+                pending?.Pause();
+                pending = root.schedule.Execute(Refresh).StartingIn(stillness);
+            }
+
             void RefreshAfter(IEventHandler changed) {
                 if (changed is IBindable field && !string.IsNullOrEmpty(field.bindingPath)) {
-                    Refresh();
+                    RefreshAfterStillness();
                 }
             }
 
@@ -72,22 +86,22 @@ namespace Spellbound.Core.Packages.Editor {
             root.RegisterCallback<ChangeEvent<string>>(change => RefreshAfter(change.target));
             root.RegisterCallback<ChangeEvent<bool>>(change => RefreshAfter(change.target));
             root.RegisterCallback<ChangeEvent<int>>(change => RefreshAfter(change.target));
-            root.TrackSerializedObjectValue(serializedObject, _ => Refresh());
+            root.TrackSerializedObjectValue(serializedObject, _ => RefreshAfterStillness());
             return root;
         }
 
-        private TextField TextFor(string field, bool multiline) {
+        private VisualElement TextFor(string field, bool multiline) {
             var text = new TextField(LabelOf(field)) { bindingPath = field, multiline = multiline };
             text.SetValueWithoutNotify(serializedObject.FindProperty(field).stringValue);
 
             if (multiline) {
-                text.style.whiteSpace = WhiteSpace.Normal;
+                text.AddToClassList(TextClassName);
             }
 
             return Marked(text, field);
         }
 
-        private DropdownField ChoiceFor(string field, IReadOnlyList<string> known) {
+        private VisualElement ChoiceFor(string field, IReadOnlyList<string> known) {
             var current = serializedObject.FindProperty(field).stringValue;
             var choice = new DropdownField(LabelOf(field)) { bindingPath = field };
             ShowChoices(choice, known, current);
@@ -95,23 +109,24 @@ namespace Spellbound.Core.Packages.Editor {
             return Marked(choice, field);
         }
 
-        private Toggle ToggleFor(string field) {
+        private VisualElement ToggleFor(string field) {
             var toggle = new Toggle(LabelOf(field)) { bindingPath = field };
             toggle.SetValueWithoutNotify(serializedObject.FindProperty(field).boolValue);
             return Marked(toggle, field);
         }
 
-        private IntegerField IntegerFor(string field) {
+        private VisualElement IntegerFor(string field) {
             var integer = new IntegerField(LabelOf(field)) { bindingPath = field };
             integer.SetValueWithoutNotify(serializedObject.FindProperty(field).intValue);
             return Marked(integer, field);
         }
 
-        private PropertyField ListFor(string field) {
+        private VisualElement ListFor(string field) {
             return Marked(new PropertyField(serializedObject.FindProperty(field), LabelOf(field)), field);
         }
 
-        private static void ShowChoices(DropdownField choice, IReadOnlyList<string> known, string current) {
+        private static void ShowChoices(VisualElement element, IReadOnlyList<string> known, string current) {
+            var choice = element.Q<DropdownField>();
             var choices = new List<string>(known);
 
             if (!string.IsNullOrWhiteSpace(current) && !choices.Contains(current)) {
@@ -123,13 +138,31 @@ namespace Spellbound.Core.Packages.Editor {
             }
         }
 
-        private static T Marked<T>(T element, string field) where T : VisualElement {
-            if (PackageIdentity.IsJudgmentField(field)) {
-                element.AddToClassList(JudgmentClassName);
-                element.tooltip = JudgmentTooltip;
+        private static VisualElement Marked(VisualElement field, string fieldName) {
+            if (!PackageIdentity.IsJudgmentField(fieldName)) {
+                return field;
             }
 
-            return element;
+            var row = new VisualElement();
+            row.AddToClassList(JudgmentClassName);
+            field.AddToClassList(JudgmentFieldClassName);
+            field.tooltip = JudgmentTooltip;
+            row.Add(field);
+            var badge = new Label(JudgmentBadgeText) { tooltip = JudgmentTooltip };
+            badge.AddToClassList(JudgmentBadgeClassName);
+            row.Add(badge);
+            return row;
+        }
+
+        private static int StillnessDelay() {
+            var settings = OperationSettings.Load();
+            var delay = Math.Max(0, settings.stillnessDelayMilliseconds);
+
+            if (!AssetDatabase.Contains(settings)) {
+                UnityEngine.Object.DestroyImmediate(settings);
+            }
+
+            return delay;
         }
 
         private static string LabelOf(string field) {
@@ -137,7 +170,9 @@ namespace Spellbound.Core.Packages.Editor {
         }
 
         private static string TitleOf(PackageIdentity identity) {
-            return string.IsNullOrWhiteSpace(identity.job) ? identity.name : identity.job.Trim();
+            var path = AssetDatabase.GetAssetPath(identity);
+            var package = string.IsNullOrEmpty(path) ? null : PackageInfo.FindForAssetPath(path);
+            return package != null ? package.displayName : identity.name;
         }
 
         private static string SubjectOf(PackageIdentity identity) {
@@ -147,7 +182,7 @@ namespace Spellbound.Core.Packages.Editor {
 
         private static SectionCard Card(string name, string title, params VisualElement[] fields) {
             var card = new SectionCard(title) { name = name };
-            card.style.marginTop = CardSpacing;
+            card.AddToClassList(CardClassName);
 
             foreach (var field in fields) {
                 card.Add(field);

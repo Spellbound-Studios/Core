@@ -1,17 +1,22 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using NUnit.Framework;
 using Spellbound.Core.Controls.Editor;
 using Spellbound.Core.Packages.Editor;
 using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 
 namespace Spellbound.Core.Tests {
     public class PackageIdentityInspectorTests {
         private const string Job = "Gives a game one plain thing.";
+        private const string IdentityName = "Fixture Identity";
+        private const int StillnessWaitMilliseconds = 3000;
 
         private PackageIdentity _identity;
         private UnityEditor.Editor _inspector;
@@ -19,6 +24,7 @@ namespace Spellbound.Core.Tests {
         [SetUp]
         public void SetUp() {
             _identity = ScriptableObject.CreateInstance<PackageIdentity>();
+            _identity.name = IdentityName;
             _identity.kind = "library";
             _identity.layer = "mechanism";
             _identity.frontDoor = "FixtureKit";
@@ -41,12 +47,14 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void AHeaderNamesTheJobAndTheFourCardsThenTheReportFollow() {
+        public void AHeaderNamesThePackageAndTheFourCardsThenTheReportFollow() {
             _identity.job = Job;
             var root = Draw();
             Assert.IsTrue(root.ClassListContains(PackageIdentityInspector.ClassName));
+            Assert.IsTrue(root.styleSheets.Contains(ControlStyleSheet.Default));
             Assert.IsInstanceOf<HeaderBar>(root[0]);
-            Assert.AreEqual(Job, ((HeaderBar)root[0]).Title);
+            Assert.AreEqual(IdentityName, ((HeaderBar)root[0]).Title);
+            Assert.AreEqual(1, root.Query<TextField>().ToList().Count(field => field.value == Job));
             var cards = root.Query<SectionCard>().ToList();
             CollectionAssert.AreEqual(
                 new[] {
@@ -92,12 +100,19 @@ namespace Spellbound.Core.Tests {
 
             foreach (var field in PackageIdentity.JudgmentFields) {
                 var element = FieldFor(root, field);
-                Assert.IsTrue(element.ClassListContains(PackageIdentityInspector.JudgmentClassName), field);
+                Assert.IsTrue(element.ClassListContains(PackageIdentityInspector.JudgmentFieldClassName), field);
                 Assert.AreEqual("A code owner reviews every change to this field.", element.tooltip, field);
+                var row = element.hierarchy.parent;
+                Assert.IsTrue(row.ClassListContains(PackageIdentityInspector.JudgmentClassName), field);
+                var badge = row.Q<Label>(className: PackageIdentityInspector.JudgmentBadgeClassName);
+                Assert.IsNotNull(badge, field);
+                Assert.AreEqual("Code owner", badge.text, field);
+                Assert.AreEqual(PackageIdentityInspector.JudgmentTooltip, badge.tooltip, field);
             }
 
             var skeleton = FieldFor(root, nameof(PackageIdentity.skeletonVersion));
-            Assert.IsFalse(skeleton.ClassListContains(PackageIdentityInspector.JudgmentClassName));
+            Assert.IsFalse(skeleton.ClassListContains(PackageIdentityInspector.JudgmentFieldClassName));
+            Assert.IsFalse(skeleton.hierarchy.parent.ClassListContains(PackageIdentityInspector.JudgmentClassName));
             Assert.IsTrue(string.IsNullOrEmpty(skeleton.tooltip));
             Assert.AreEqual(PackageIdentity.JudgmentFields.Count,
                 root.Query<VisualElement>(className: PackageIdentityInspector.JudgmentClassName).ToList().Count);
@@ -138,8 +153,8 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual(ReportView.EmptyText, report.Q<Label>(className: ReportView.EmptyClassName).text);
         }
 
-        [Test]
-        public void TheReportAndTheHeaderFollowAFieldAsItChanges() {
+        [UnityTest]
+        public IEnumerator TheReportFollowsAFieldOnceTheAssetHasBeenStill() {
             var root = Draw();
             var window = ControlTestWindow.Open(root);
 
@@ -149,8 +164,15 @@ namespace Spellbound.Core.Tests {
                 CollectionAssert.AreEqual(new[] { PackageIdentity.JobEmptyCode }, CodesIn(report));
                 _identity.job = Job;
                 ((TextField)FieldFor(root, nameof(PackageIdentity.job))).value = Job;
+                CollectionAssert.AreEqual(new[] { PackageIdentity.JobEmptyCode }, CodesIn(report));
+                var stopwatch = Stopwatch.StartNew();
+
+                while (CodesIn(report).Count > 0 && stopwatch.ElapsedMilliseconds < StillnessWaitMilliseconds) {
+                    yield return null;
+                }
+
                 CollectionAssert.IsEmpty(CodesIn(report));
-                Assert.AreEqual(Job, ((HeaderBar)root[0]).Title);
+                Assert.AreEqual(IdentityName, ((HeaderBar)root[0]).Title);
             }
             finally {
                 window.Close();

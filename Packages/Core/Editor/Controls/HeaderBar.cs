@@ -4,7 +4,8 @@ using Spellbound.Core.Authoring;
 using UnityEngine.UIElements;
 
 namespace Spellbound.Core.Controls.Editor {
-    public class HeaderBar : VisualElement {
+    [UxmlElement]
+    public partial class HeaderBar : VisualElement {
         public const string ClassName = "sb-header";
         public const string TitleClassName = ClassName + "__title";
         public const string ActionsClassName = ClassName + "__actions";
@@ -19,18 +20,12 @@ namespace Spellbound.Core.Controls.Editor {
 
         public HeaderBar(string title, FindingSeverity? severity = null) {
             AddToClassList(ClassName);
-            style.flexDirection = FlexDirection.Row;
-            style.justifyContent = Justify.SpaceBetween;
-            style.alignItems = Align.Center;
-            _title = new Label(title);
+            ControlStyleSheet.Apply(this);
+            _title = CreateTitle(title);
             _title.AddToClassList(TitleClassName);
-            _title.style.flexShrink = 1;
-            _title.style.whiteSpace = WhiteSpace.Normal;
             hierarchy.Add(_title);
-            Actions = new VisualElement();
+            Actions = CreateActions();
             Actions.AddToClassList(ActionsClassName);
-            Actions.style.flexDirection = FlexDirection.Row;
-            Actions.style.alignItems = Align.Center;
             hierarchy.Add(Actions);
             Severity = severity;
         }
@@ -39,6 +34,7 @@ namespace Spellbound.Core.Controls.Editor {
 
         public override VisualElement contentContainer => Actions;
 
+        [UxmlAttribute]
         public string Title {
             get => _title.text;
             set => _title.text = value;
@@ -56,6 +52,14 @@ namespace Spellbound.Core.Controls.Editor {
                     AddToClassList(ClassFor(value.Value));
                 }
             }
+        }
+
+        protected virtual Label CreateTitle(string title) {
+            return new Label(title);
+        }
+
+        protected virtual VisualElement CreateActions() {
+            return new VisualElement();
         }
 
         private static string ClassFor(FindingSeverity severity) {

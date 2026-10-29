@@ -1,0 +1,77 @@
+.sb-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sb-header__title {
+    flex-shrink: 1;
+    white-space: normal;
+}
+
+.sb-header__actions {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sb-report__checks,
+.sb-report__code,
+.sb-report__check,
+.sb-report__message,
+.sb-report__hint,
+.sb-report__empty {
+    white-space: normal;
+}
+
+.sb-report__actions {
+    flex-direction: row;
+}
+
+.sb-type-picker-drawer__fields {
+    margin-left: 14px;
+}
+
+.sb-window {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.sb-window__pages {
+    flex-direction: column;
+}
+
+.sb-window__body {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.sb-window__content {
+    flex-grow: 1;
+}
+
+.sb-window__failure {
+    white-space: normal;
+}
+
+.sb-judgment {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sb-judgment__field {
+    flex-grow: 1;
+}
+
+.sb-judgment__badge {
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.sb-package-identity__card,
+.sb-package-identity__report {
+    margin-top: 4px;
+}
+
+.sb-package-identity__text {
+    white-space: normal;
+}

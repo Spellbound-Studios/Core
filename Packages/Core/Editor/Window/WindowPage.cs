@@ -8,6 +8,10 @@ namespace Spellbound.Core.Window.Editor {
 
         public abstract VisualElement CreateContent();
 
+        public virtual VisualElement CreateHeaderControls() {
+            return null;
+        }
+
         public virtual void Shown() { }
 
         public virtual void Hidden() { }
