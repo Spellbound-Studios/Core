@@ -46,6 +46,7 @@ namespace Spellbound.Core.Authoring.Editor {
                 if (banner == null) {
                     banner = new VisualElement { name = ElementName };
                     banner.AddToClassList(ClassName);
+                    EditorLook.Dress(banner);
                     Host(root).Insert(0, banner);
                 }
 
@@ -56,6 +57,7 @@ namespace Spellbound.Core.Authoring.Editor {
         public static VisualElement Build(ScriptableObject asset, string path) {
             var banner = new VisualElement { name = ElementName };
             banner.AddToClassList(ClassName);
+            EditorLook.Dress(banner);
             Fill(banner, asset, path);
             return banner;
         }

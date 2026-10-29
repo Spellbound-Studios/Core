@@ -45,7 +45,7 @@ namespace Spellbound.Core.Packages.Editor {
             report.AddToClassList(ReportClassName);
             var root = new VisualElement();
             root.AddToClassList(ClassName);
-            ControlStyleSheet.Apply(root);
+            EditorLook.Dress(root);
             root.Add(header);
             root.Add(Card(PackageCardName, PackageCardTitle, TextFor(nameof(PackageIdentity.job), true), kind, layer,
                 status, TextFor(nameof(PackageIdentity.frontDoor), false)));

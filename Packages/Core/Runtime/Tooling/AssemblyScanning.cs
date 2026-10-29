@@ -1,4 +1,4 @@
-// Copyright 2026 Spellbound Studio Inc.
+// Copyright (c) Spellbound Studios. All rights reserved.
 
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ namespace Spellbound.Core.Tooling {
     public static class AssemblyScanning {
         public static IEnumerable<Assembly> ScannableAssemblies() {
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
-                if (!ShouldSkip(assembly.GetName().Name))
+                if (!IsSkipped(assembly.GetName().Name))
                     yield return assembly;
             }
         }
@@ -29,15 +29,29 @@ namespace Spellbound.Core.Tooling {
             }
         }
 
-        private static bool ShouldSkip(string name) =>
-                string.IsNullOrEmpty(name)
-                || name.StartsWith("System")
-                || name.StartsWith("mscorlib")
-                || name.StartsWith("netstandard")
-                || name.StartsWith("Mono.")
-                || name.StartsWith("nunit")
-                || name.StartsWith("UnityEngine")
-                || name.StartsWith("UnityEditor")
-                || name.StartsWith("Unity.");
+        public static bool IsSkipped(string assemblyName) {
+            if (string.IsNullOrEmpty(assemblyName)) {
+                return true;
+            }
+
+            return string.Equals(assemblyName, "mscorlib", StringComparison.Ordinal)
+                   || string.Equals(assemblyName, "netstandard", StringComparison.Ordinal)
+                   || BelongsTo(assemblyName, "System")
+                   || BelongsTo(assemblyName, "Mono")
+                   || BelongsTo(assemblyName, "nunit")
+                   || BelongsTo(assemblyName, "UnityEngine")
+                   || BelongsTo(assemblyName, "UnityEditor")
+                   || BelongsTo(assemblyName, "Unity");
+        }
+
+        private static bool BelongsTo(string assemblyName, string family) {
+            if (string.Equals(assemblyName, family, StringComparison.Ordinal)) {
+                return true;
+            }
+
+            return assemblyName.Length > family.Length
+                   && assemblyName[family.Length] == '.'
+                   && assemblyName.StartsWith(family, StringComparison.Ordinal);
+        }
     }
 }

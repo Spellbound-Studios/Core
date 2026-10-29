@@ -13,27 +13,32 @@ using UnityEngine.UIElements;
 namespace Spellbound.Core {
     [CustomEditor(typeof(ObjectPreset))]
     public sealed class ObjectPresetEditor : UnityEditor.Editor {
+        public const string ClassName = "sb-object-preset";
+        public const string HeadingClassName = ClassName + "__heading";
+        public const string SurfacesClassName = ClassName + "__surfaces";
+        public const string AddSurfaceClassName = ClassName + "__add-surface";
+        public const string SurfaceClassName = ClassName + "__surface";
+        public const string RemoveSurfaceClassName = ClassName + "__remove-surface";
+        public const string ModulesClassName = ClassName + "__modules";
+        public const string AddModuleClassName = ClassName + "__add-module";
+        public const string ModuleClassName = ClassName + "__module";
+        public const string ModuleHeaderClassName = ClassName + "__module-header";
+        public const string ModuleTitleClassName = ClassName + "__module-title";
+        public const string RemoveModuleClassName = ClassName + "__remove-module";
+        public const string ModuleEmptyClassName = ClassName + "__module-empty";
+
         private const string FieldSurfaceModules = "surfaceModules";
         private const string FieldPresetModules = "presetModules";
         private const string FieldSurfaceName = "surfaceName";
 
         public override VisualElement CreateInspectorGUI() {
             var root = new VisualElement();
-            root.style.marginTop = 4;
-
+            root.AddToClassList(ClassName);
+            EditorLook.Dress(root);
             BuildDefaultFields(root);
-            root.Add(Spacer(8));
-
-            var header = new Label("Surface Modules") {
-                style = {
-                    unityFontStyleAndWeight = FontStyle.Bold,
-                    fontSize = 14,
-                    marginBottom = 4
-                }
-            };
-
-            root.Add(header);
-
+            var heading = new Label("Surface Modules");
+            heading.AddToClassList(HeadingClassName);
+            root.Add(heading);
             var surfacesProp = serializedObject.FindProperty(FieldSurfaceModules);
 
             if (surfacesProp == null) {
@@ -45,6 +50,7 @@ namespace Spellbound.Core {
             }
 
             var surfacesContainer = new VisualElement();
+            surfacesContainer.AddToClassList(SurfacesClassName);
             root.Add(surfacesContainer);
 
             void RenderAllSurfaces() {
@@ -66,10 +72,10 @@ namespace Spellbound.Core {
                 PersistStructuralChange();
                 RenderAllSurfaces();
             }) {
-                text = "Add Surface",
-                style = { marginTop = 6 }
+                text = "Add Surface"
             };
 
+            addSurfaceBtn.AddToClassList(AddSurfaceClassName);
             root.Add(addSurfaceBtn);
 
             return root;
@@ -100,12 +106,8 @@ namespace Spellbound.Core {
             var nameProp = surfaceProp.FindPropertyRelative(FieldSurfaceName);
             var modulesProp = surfaceProp.FindPropertyRelative(FieldPresetModules);
 
-            var card = new SectionCard(nameProp.stringValue) {
-                style = {
-                    marginBottom = 12
-                }
-            };
-
+            var card = new SectionCard(nameProp.stringValue);
+            card.AddToClassList(SurfaceClassName);
             card.TrackPropertyValue(nameProp, renamed => card.Title = renamed.stringValue);
 
             var nameField = new PropertyField(nameProp, $"Surface {index}");
@@ -118,21 +120,14 @@ namespace Spellbound.Core {
                 PersistStructuralChange();
                 onChanged();
             }) {
-                text = "Remove Surface",
-                style = {
-                    marginLeft = 6
-                }
+                text = "Remove Surface"
             };
 
+            removeSurfaceBtn.AddToClassList(RemoveSurfaceClassName);
             card.Header.Add(removeSurfaceBtn);
 
-            var modulesContainer = new VisualElement {
-                style = {
-                    marginLeft = 4,
-                    marginTop = 2
-                }
-            };
-
+            var modulesContainer = new VisualElement();
+            modulesContainer.AddToClassList(ModulesClassName);
             card.Add(modulesContainer);
 
             void RenderAllModules() {
@@ -146,10 +141,10 @@ namespace Spellbound.Core {
             RenderAllModules();
 
             var addModuleBtn = new Button(() => ShowModuleAddMenu(modulesProp, RenderAllModules)) {
-                text = "Add Module",
-                style = { marginTop = 4 }
+                text = "Add Module"
             };
 
+            addModuleBtn.AddToClassList(AddModuleClassName);
             card.Add(addModuleBtn);
 
             return card;
@@ -158,49 +153,12 @@ namespace Spellbound.Core {
         private VisualElement BuildModuleRow(SerializedProperty modulesProp, int index, Action onChanged) {
             var capturedIndex = index;
             var moduleProp = modulesProp.GetArrayElementAtIndex(index);
-
-            var moduleAccent = new Color(0.3f, 0.7f, 0.4f);
-
-            var row = new VisualElement {
-                style = {
-                    marginTop = 8,
-                    marginBottom = 4,
-                    paddingTop = 8,
-                    paddingBottom = 10,
-                    paddingLeft = 10,
-                    paddingRight = 10,
-                    borderLeftWidth = 4,
-                    borderLeftColor = moduleAccent,
-                    borderTopWidth = 1,
-                    borderRightWidth = 1,
-                    borderBottomWidth = 1,
-                    borderTopColor = new Color(moduleAccent.r, moduleAccent.g, moduleAccent.b, 0.25f),
-                    borderRightColor = new Color(moduleAccent.r, moduleAccent.g, moduleAccent.b, 0.25f),
-                    borderBottomColor = new Color(moduleAccent.r, moduleAccent.g, moduleAccent.b, 0.25f),
-                    backgroundColor = new Color(0f, 0f, 0f, 0.12f)
-                }
-            };
-
-            var header = new VisualElement {
-                style = {
-                    flexDirection = FlexDirection.Row,
-                    alignItems = Align.Center,
-                    marginBottom = 6,
-                    paddingBottom = 6,
-                    borderBottomWidth = 1,
-                    borderBottomColor = new Color(1f, 1f, 1f, 0.08f)
-                }
-            };
-
-            var typeLabel = new Label(GetNiceTypeName(moduleProp)) {
-                style = {
-                    flexGrow = 1,
-                    unityFontStyleAndWeight = FontStyle.Bold,
-                    fontSize = 14,
-                    color = new Color(0.86f, 0.96f, 0.86f)
-                }
-            };
-
+            var row = new VisualElement();
+            row.AddToClassList(ModuleClassName);
+            var header = new VisualElement();
+            header.AddToClassList(ModuleHeaderClassName);
+            var typeLabel = new Label(GetNiceTypeName(moduleProp));
+            typeLabel.AddToClassList(ModuleTitleClassName);
             header.Add(typeLabel);
 
             var removeBtn = new Button(() => {
@@ -209,21 +167,16 @@ namespace Spellbound.Core {
                 PersistStructuralChange();
                 onChanged();
             }) {
-                text = "Remove",
-                style = { marginLeft = 4 }
+                text = "Remove"
             };
 
+            removeBtn.AddToClassList(RemoveModuleClassName);
             header.Add(removeBtn);
             row.Add(header);
 
             if (moduleProp.managedReferenceValue == null) {
-                var emptyLabel = new Label("(null managed reference)") {
-                    style = {
-                        color = new Color(0.85f, 0.5f, 0.3f),
-                        unityFontStyleAndWeight = FontStyle.Italic
-                    }
-                };
-
+                var emptyLabel = new Label("(null managed reference)");
+                emptyLabel.AddToClassList(ModuleEmptyClassName);
                 row.Add(emptyLabel);
 
                 return row;
@@ -299,13 +252,6 @@ namespace Spellbound.Core {
             return lastDot >= 0
                     ? full[(lastDot + 1)..]
                     : full;
-        }
-
-        private static VisualElement Spacer(float height) {
-            var v = new VisualElement();
-            v.style.height = height;
-
-            return v;
         }
     }
 }

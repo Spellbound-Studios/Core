@@ -242,18 +242,97 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void AConsumerStyleSheetIsAppliedAfterTheControlSheet() {
-            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+        public void TheShellCarriesTheLayoutSheetAndAnEmptyFooter() {
+            var shell = new WindowShell(ThreePages());
+            Assert.IsTrue(shell.styleSheets.Contains(ControlStyleSheet.Default));
+            Assert.IsTrue(shell.Footer.ClassListContains(WindowShell.FooterClassName));
+            Assert.AreSame(shell.Body, shell.Footer.hierarchy.parent);
+            Assert.AreEqual(string.Empty, shell.Footer.text);
+            Assert.AreEqual(DisplayStyle.None, shell.Footer.style.display.value);
+            Assert.AreEqual(HeaderStates.Neutral, shell.Header.State);
+            Assert.AreEqual(string.Empty, shell.Header.Sentence);
+        }
 
-            try {
-                var shell = new WindowShell(ThreePages(), null, sheet);
-                Assert.IsTrue(shell.styleSheets.Contains(ControlStyleSheet.Default));
-                Assert.IsTrue(shell.styleSheets.Contains(sheet));
-                Assert.AreSame(sheet, shell.styleSheets[shell.styleSheets.count - 1]);
-            }
-            finally {
-                UnityEngine.Object.DestroyImmediate(sheet);
-            }
+        [Test]
+        public void APageSetsTheHeaderSentenceTheStateAndTheFooterWhileItIsShown() {
+            var shell = new WindowShell(new WindowPages(new[] {
+                new WindowPageDescription(typeof(SurfacePage), "Surface", 0),
+                new WindowPageDescription(typeof(CountingPage), "Plain", 1)
+            }));
+
+            var page = (SurfacePage)shell.CurrentPage;
+            Assert.AreEqual("three rules to confirm", shell.Header.Sentence);
+            Assert.AreEqual(HeaderStates.Warning, shell.Header.State);
+            Assert.AreEqual("compiled: current", shell.Footer.text);
+            Assert.AreEqual(DisplayStyle.Flex, shell.Footer.style.display.value);
+            page.HeaderSentence = "all passed";
+            page.HeaderState = HeaderStates.Passed;
+            page.FooterText = string.Empty;
+            Assert.AreEqual("all passed", shell.Header.Sentence);
+            Assert.AreEqual(HeaderStates.Passed, shell.Header.State);
+            Assert.AreEqual(DisplayStyle.None, shell.Footer.style.display.value);
+            Assert.AreEqual("Surface", shell.Header.Title);
+        }
+
+        [Test]
+        public void AnotherPageClearsTheSurfaceAHiddenPageDoesNotReachItAndAReturnRestoresIt() {
+            var shell = new WindowShell(new WindowPages(new[] {
+                new WindowPageDescription(typeof(SurfacePage), "Surface", 0),
+                new WindowPageDescription(typeof(CountingPage), "Plain", 1)
+            }));
+
+            var page = (SurfacePage)shell.CurrentPage;
+            shell.Select("Plain");
+            Assert.AreEqual(string.Empty, shell.Header.Sentence);
+            Assert.AreEqual(HeaderStates.Neutral, shell.Header.State);
+            Assert.AreEqual(DisplayStyle.None, shell.Footer.style.display.value);
+            page.HeaderSentence = "changed while hidden";
+            page.HeaderState = HeaderStates.Error;
+            page.FooterText = "stale";
+            Assert.AreEqual(string.Empty, shell.Header.Sentence);
+            Assert.AreEqual(HeaderStates.Neutral, shell.Header.State);
+            shell.Select("Surface");
+            Assert.AreEqual("changed while hidden", shell.Header.Sentence);
+            Assert.AreEqual(HeaderStates.Error, shell.Header.State);
+            Assert.AreEqual("stale", shell.Footer.text);
+            Assert.AreEqual(DisplayStyle.Flex, shell.Footer.style.display.value);
+        }
+
+        [Test]
+        public void ASurfaceSetWhileThePageDrawsReachesTheHeaderAndTheFooter() {
+            var shell = new WindowShell(new WindowPages(new[] {
+                new WindowPageDescription(typeof(DrawingSurfacePage), "Drawn", 0),
+                new WindowPageDescription(typeof(CountingPage), "Plain", 1)
+            }));
+
+            Assert.AreEqual("set while drawing", shell.Header.Sentence);
+            Assert.AreEqual(HeaderStates.Passed, shell.Header.State);
+            Assert.AreEqual("set by the controls", shell.Footer.text);
+            Assert.AreEqual(DisplayStyle.Flex, shell.Footer.style.display.value);
+            shell.Select("Plain");
+            Assert.AreEqual(string.Empty, shell.Header.Sentence);
+            shell.Select("Drawn");
+            Assert.AreEqual("set while drawing", shell.Header.Sentence);
+            Assert.AreEqual("set by the controls", shell.Footer.text);
+            var page = (DrawingSurfacePage)shell.CurrentPage;
+            page.HeaderSentence = "once more";
+            Assert.AreEqual("once more", shell.Header.Sentence);
+            Assert.AreEqual(2, page.Draws);
+        }
+
+        [Test]
+        public void APageNormalisesItsStateAndItsTextsAndRaisesSurfaceChanged() {
+            var page = new SurfacePage();
+            var changes = 0;
+            page.SurfaceChanged += _ => changes++;
+            page.HeaderState = null;
+            page.HeaderSentence = null;
+            page.FooterText = null;
+            Assert.AreEqual(HeaderStates.Neutral, page.HeaderState);
+            Assert.AreEqual(string.Empty, page.HeaderSentence);
+            Assert.AreEqual(string.Empty, page.FooterText);
+            Assert.AreEqual(3, changes);
+            Assert.Throws<ArgumentException>(() => page.HeaderState = "not one word");
         }
 
         [Test]
@@ -264,6 +343,7 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual("tagged-header", shell.Header.name);
             Assert.AreEqual("tagged-content", shell.Content.name);
             Assert.AreEqual("tagged-page-controls", shell.PageControls.name);
+            Assert.AreEqual("tagged-footer", shell.Footer.name);
             Assert.AreEqual("tagged-button", shell.PageList.Q<Button>().name);
             var empty = new TaggedShell(new WindowPages(Array.Empty<WindowPageDescription>()));
             Assert.AreEqual("tagged-empty", empty.Content.Q<Label>(className: WindowShell.EmptyClassName).name);
@@ -272,6 +352,34 @@ namespace Spellbound.Core.Tests {
             }));
             Assert.AreEqual("tagged-failure", broken.Content.Q<Label>(className: WindowShell.FailureClassName).name);
             Assert.AreEqual(1, _recording.CountOf(LogLevel.Error));
+        }
+
+        private sealed class SurfacePage : WindowPage {
+            public SurfacePage() {
+                HeaderSentence = "three rules to confirm";
+                HeaderState = HeaderStates.Warning;
+                FooterText = "compiled: current";
+            }
+
+            public override VisualElement CreateContent() {
+                return new Label(Title) { name = ContentName };
+            }
+        }
+
+        private sealed class DrawingSurfacePage : WindowPage {
+            public int Draws { get; private set; }
+
+            public override VisualElement CreateContent() {
+                Draws++;
+                HeaderSentence = "set while drawing";
+                HeaderState = HeaderStates.Passed;
+                return new Label(Title) { name = ContentName };
+            }
+
+            public override VisualElement CreateHeaderControls() {
+                FooterText = "set by the controls";
+                return new Button { text = "Refresh" };
+            }
         }
 
         private sealed class ControlledPage : WindowPage {
@@ -299,6 +407,8 @@ namespace Spellbound.Core.Tests {
 
             protected override VisualElement CreatePageControls() =>
                 new VisualElement { name = "tagged-page-controls" };
+
+            protected override Label CreateFooter() => new Label { name = "tagged-footer" };
 
             protected override Button CreatePageButton(WindowPageDescription page) {
                 var button = base.CreatePageButton(page);

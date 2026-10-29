@@ -42,7 +42,24 @@ namespace Spellbound.Core.Controls.Editor {
 
             var sheet = Default;
 
-            if (sheet != null && !element.styleSheets.Contains(sheet)) {
+            if (sheet == null) {
+                return;
+            }
+
+            if (!element.styleSheets.Contains(sheet)) {
+                element.styleSheets.Add(sheet);
+            }
+
+            element.RegisterCallback<AttachToPanelEvent>(_ => FollowAncestors(element, sheet));
+        }
+
+        public static void FollowAncestors(VisualElement element, StyleSheet sheet) {
+            var dressedAbove = EditorLook.HasDressedAncestor(element);
+
+            if (dressedAbove && element.styleSheets.Contains(sheet)) {
+                element.styleSheets.Remove(sheet);
+            }
+            else if (!dressedAbove && !element.styleSheets.Contains(sheet)) {
                 element.styleSheets.Add(sheet);
             }
         }

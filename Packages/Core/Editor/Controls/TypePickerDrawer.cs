@@ -15,7 +15,7 @@ namespace Spellbound.Core.Controls.Editor {
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             var root = CreateRoot();
             root.AddToClassList(ClassName);
-            ControlStyleSheet.Apply(root);
+            EditorLook.Dress(root);
             var baseType = ResolveBaseType(property);
 
             if (baseType == null) {

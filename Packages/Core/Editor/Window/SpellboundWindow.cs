@@ -1,5 +1,6 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
+using Spellbound.Core.Controls.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -12,8 +13,6 @@ namespace Spellbound.Core.Window.Editor {
         [SerializeField] private string selectedPage;
 
         private WindowShell _shell;
-
-        public static StyleSheet ConsumerStyleSheet { get; set; }
 
         public WindowShell Shell => _shell;
         public WindowPage CurrentPage => _shell?.CurrentPage;
@@ -41,10 +40,11 @@ namespace Spellbound.Core.Window.Editor {
         }
 
         protected virtual WindowShell CreateShell(WindowPages pages, string selectedTitle) {
-            return new WindowShell(pages, selectedTitle, ConsumerStyleSheet);
+            return new WindowShell(pages, selectedTitle);
         }
 
         private void CreateGUI() {
+            EditorLook.Dress(rootVisualElement);
             _shell = CreateShell(WindowPages.Default, selectedPage);
             _shell.PageSelected += title => selectedPage = title;
             rootVisualElement.Add(_shell);

@@ -10,6 +10,7 @@ namespace Spellbound.Core.Controls.Editor {
     [UxmlElement]
     public partial class ReportView : VisualElement {
         public const string ClassName = "sb-report";
+        public const string StateClassPrefix = ClassName + "--";
         public const string ChecksClassName = ClassName + "__checks";
         public const string FindingClassName = ClassName + "__finding";
         public const string ErrorClassName = FindingClassName + "--error";
@@ -24,14 +25,17 @@ namespace Spellbound.Core.Controls.Editor {
         public const string BannerClassName = ClassName + "__banner";
         public const string CompactClassName = ClassName + "--compact";
         public const string EmptyClassName = ClassName + "__empty";
-        public const string EmptyText = "no findings";
+        public const string DefaultEmptyText = "no findings";
         public const int DefaultMaximumActions = 2;
 
         private readonly List<VisualElement> _findingRows = new List<VisualElement>();
         private bool _compact;
+        private string _state = HeaderStates.Neutral;
+        private string _emptyText = DefaultEmptyText;
 
         public ReportView() {
             AddToClassList(ClassName);
+            AddToClassList(StateClassNameFor(_state));
             ControlStyleSheet.Apply(this);
             Banner = CreateBanner();
             Banner.AddToClassList(BannerClassName);
@@ -46,8 +50,27 @@ namespace Spellbound.Core.Controls.Editor {
         [UxmlAttribute]
         public int MaximumActions { get; set; } = DefaultMaximumActions;
 
+        [UxmlAttribute]
+        public string EmptyText {
+            get => _emptyText;
+            set {
+                var text = string.IsNullOrWhiteSpace(value) ? DefaultEmptyText : value;
+
+                if (string.Equals(_emptyText, text, StringComparison.Ordinal)) {
+                    return;
+                }
+
+                _emptyText = text;
+
+                if (Run != null) {
+                    Rebind();
+                }
+            }
+        }
+
         public ValidationRun Run { get; private set; }
         public HeaderBar Banner { get; }
+        public string State => _state;
         public IReadOnlyList<VisualElement> FindingRows => _findingRows;
 
         [UxmlAttribute]
@@ -61,6 +84,10 @@ namespace Spellbound.Core.Controls.Editor {
                 _compact = value;
                 Rebind();
             }
+        }
+
+        public static string StateClassNameFor(string state) {
+            return StateClassPrefix + HeaderStates.Normalize(state);
         }
 
         public void Bind(ValidationRun run) {
@@ -82,16 +109,20 @@ namespace Spellbound.Core.Controls.Editor {
             Clear();
             _findingRows.Clear();
             EnableInClassList(CompactClassName, _compact);
+            var ordered = Run?.Report.Ordered();
+            ShowState(Run == null ? HeaderStates.Neutral
+                : ordered.Count == 0 ? HeaderStates.Passed
+                : HeaderStates.For(ordered[0].Severity));
 
             if (Run == null) {
                 return;
             }
 
             if (_compact) {
-                BuildCompact();
+                BuildCompact(ordered);
             }
             else {
-                BuildFull();
+                BuildFull(ordered);
             }
         }
 
@@ -123,18 +154,22 @@ namespace Spellbound.Core.Controls.Editor {
             return new Button(() => action.Run(finding)) { text = action.Label };
         }
 
-        private void BuildCompact() {
-            var ordered = Run.Report.Ordered();
+        private void ShowState(string state) {
+            RemoveFromClassList(StateClassNameFor(_state));
+            _state = state;
+            AddToClassList(StateClassNameFor(_state));
+            Banner.State = _state;
+        }
+
+        private void BuildCompact(IReadOnlyList<ValidationFinding> ordered) {
             var title = Run.Summary();
 
             if (ordered.Count > 0) {
                 var first = ordered[0];
-                Banner.Severity = first.Severity;
                 Banner.tooltip = first.ToText();
                 title += ": " + first.Code + " " + first.Message;
             }
             else {
-                Banner.Severity = null;
                 Banner.tooltip = null;
             }
 
@@ -142,11 +177,10 @@ namespace Spellbound.Core.Controls.Editor {
             Add(Banner);
         }
 
-        private void BuildFull() {
+        private void BuildFull(IReadOnlyList<ValidationFinding> ordered) {
             var checks = CreateChecksLine(Run.ChecksLine());
             checks.AddToClassList(ChecksClassName);
             Add(checks);
-            var ordered = Run.Report.Ordered();
 
             if (ordered.Count == 0) {
                 var empty = CreateEmpty();

@@ -32,14 +32,17 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void FindOverTheLoadedAssembliesIncludesTheFixture() {
-            var found = false;
+        public void FindOverTheLoadedAssembliesSkipsTheTestFixtureAndAnExplicitListKeepsIt() {
+            var listed = false;
 
             foreach (var door in BridgeDoors.Find()) {
-                found |= door.TypeName == "FixtureOtherKit";
+                listed |= door.TypeName == "FixtureOtherKit";
             }
 
-            Assert.IsTrue(found);
+            Assert.IsFalse(listed);
+            var explicitDoors = BridgeDoors.Find(new[] { typeof(FixtureOtherKit).Assembly });
+            Assert.AreEqual(1, explicitDoors.Count);
+            Assert.AreEqual("FixtureOtherKit", explicitDoors[0].TypeName);
         }
 
         [Test]

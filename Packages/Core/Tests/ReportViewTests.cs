@@ -177,7 +177,7 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual(1, _view.childCount);
             Assert.AreSame(_view.Banner, _view[0]);
             Assert.IsTrue(_view.Banner.ClassListContains(ReportView.BannerClassName));
-            Assert.IsTrue(_view.Banner.ClassListContains(HeaderBar.ErrorClassName));
+            Assert.IsTrue(_view.Banner.ClassListContains(HeaderStates.ClassNameFor(HeaderStates.Error)));
             StringAssert.StartsWith(_view.Run.Summary(), _view.Banner.Title);
             Assert.AreEqual(
                 "1 error, 1 warning, 1 information in 1 asset: "
@@ -207,12 +207,52 @@ namespace Spellbound.Core.Tests {
         public void AnEmptyReportSaysSo() {
             var view = new ReportView();
             view.Bind(new ValidationReport(Subject));
-            Assert.AreEqual(ReportView.EmptyText, view.Q<Label>(className: ReportView.EmptyClassName).text);
+            Assert.AreEqual(ReportView.DefaultEmptyText, view.Q<Label>(className: ReportView.EmptyClassName).text);
             Assert.AreEqual("checks: none", view.Q<Label>(className: ReportView.ChecksClassName).text);
             Assert.AreEqual(0, view.FindingRows.Count);
             view.Compact = true;
-            Assert.IsNull(view.Banner.Severity);
+            Assert.AreEqual(HeaderStates.Passed, view.Banner.State);
             Assert.AreEqual("no findings in 1 asset", view.Banner.Title);
+        }
+
+        [Test]
+        public void AnEmptyReportShowsPassedAsAStateOfItsOwn() {
+            var view = new ReportView();
+            Assert.AreEqual(HeaderStates.Neutral, view.State);
+            Assert.IsTrue(view.ClassListContains(ReportView.StateClassNameFor(HeaderStates.Neutral)));
+            view.Bind(new ValidationReport(Subject));
+            Assert.AreEqual(HeaderStates.Passed, view.State);
+            Assert.IsTrue(view.ClassListContains("sb-report--passed"));
+            Assert.IsFalse(view.ClassListContains("sb-report--neutral"));
+            Assert.AreEqual(HeaderStates.Passed, view.Banner.State);
+            view.Bind((ValidationRun)null);
+            Assert.AreEqual(HeaderStates.Neutral, view.State);
+            Assert.AreEqual(HeaderStates.Neutral, view.Banner.State);
+        }
+
+        [Test]
+        public void AReportWithFindingsTakesTheStateOfItsWorstFinding() {
+            Assert.AreEqual(HeaderStates.Error, _view.State);
+            Assert.IsTrue(_view.ClassListContains("sb-report--error"));
+            _view.Compact = true;
+            Assert.AreEqual(HeaderStates.Error, _view.Banner.State);
+            var warnings = new ValidationReport(Subject);
+            warnings.Warning("fixture.title-long", "the title is long");
+            var view = new ReportView();
+            view.Bind(warnings);
+            Assert.AreEqual(HeaderStates.Warning, view.State);
+        }
+
+        [Test]
+        public void TheEmptyTextIsSettableBeforeAndAfterBindingAndBlankFallsBackToTheDefault() {
+            var view = new ReportView { EmptyText = "In sync" };
+            view.Bind(new ValidationReport(Subject));
+            Assert.AreEqual("In sync", view.Q<Label>(className: ReportView.EmptyClassName).text);
+            view.EmptyText = "All clear";
+            Assert.AreEqual("All clear", view.Q<Label>(className: ReportView.EmptyClassName).text);
+            view.EmptyText = " ";
+            Assert.AreEqual(ReportView.DefaultEmptyText, view.EmptyText);
+            Assert.AreEqual(ReportView.DefaultEmptyText, view.Q<Label>(className: ReportView.EmptyClassName).text);
         }
 
         private static IReadOnlyList<FindingAction> ThreeActions(ValidationFinding finding) {
