@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using Spellbound.Core.Operations.Editor;
 
-namespace Spellbound.Core.Ledger.Editor {
+namespace Spellbound.Core.UnityLedger {
     public static class ChangelogScan {
         public static IReadOnlyList<string> LinesBetween(string changelog, string fromVersion, string toVersion,
             IReadOnlyList<string> watchWords) {

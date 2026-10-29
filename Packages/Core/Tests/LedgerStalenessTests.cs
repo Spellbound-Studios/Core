@@ -1,7 +1,7 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
 using NUnit.Framework;
-using Spellbound.Core.Ledger;
+using Spellbound.Core.UnityLedger;
 
 namespace Spellbound.Core.Tests {
     public class LedgerStalenessTests {

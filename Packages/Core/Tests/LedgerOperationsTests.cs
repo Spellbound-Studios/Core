@@ -1,17 +1,25 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
+using System.Collections.Generic;
 using NUnit.Framework;
 using Spellbound.Core.Operations;
+using Spellbound.Core.UnityLedger;
 
 namespace Spellbound.Core.Tests {
     public class LedgerOperationsTests {
         [Test]
         public void UnityLedgerReadsThisProjectsLedgers() {
-            var text = new OperationHost().Run("core unity-ledger", OperationCaller.Development()).Result.Text;
+            var host = new OperationHost();
+            var problems = new List<string>();
+            var rows = LedgerSources.All(host.Settings, problems);
+            var expected = LedgerCheck.ForThisEditor().Run(rows, problems,
+                LedgerSources.SourceNames(host.Settings).Count);
+            var text = host.Run("core unity-ledger", OperationCaller.Development()).Result.Text;
             var firstWord = text.Split(':')[0];
 
-            Assert.That(firstWord, Is.EqualTo("succeeded").Or.EqualTo("failed"), text);
-            StringAssert.Contains("rows stale", text);
+            Assert.AreEqual(expected.Passed ? "succeeded" : "failed", firstWord, text);
+            StringAssert.Contains(expected.Summary(), text);
+            Assert.Greater(expected.SourceCount, 0);
         }
 
         [Test]

@@ -2,7 +2,7 @@
 
 using System;
 
-namespace Spellbound.Core.Ledger {
+namespace Spellbound.Core.UnityLedger {
     public static class LedgerVerdicts {
         public static bool TryParse(string text, out LedgerVerdict verdict) {
             verdict = LedgerVerdict.Watch;

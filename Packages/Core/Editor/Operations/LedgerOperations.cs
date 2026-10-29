@@ -1,7 +1,7 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
 using System.Collections.Generic;
-using Spellbound.Core.Ledger.Editor;
+using Spellbound.Core.UnityLedger;
 
 namespace Spellbound.Core.Operations.Editor {
     public static class LedgerOperations {

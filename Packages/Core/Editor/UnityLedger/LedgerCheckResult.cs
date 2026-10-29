@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Spellbound.Core.Ledger.Editor {
+namespace Spellbound.Core.UnityLedger {
     public sealed class LedgerCheckResult {
         public IReadOnlyList<LedgerRowResult> Rows { get; }
         public IReadOnlyList<string> Problems { get; }

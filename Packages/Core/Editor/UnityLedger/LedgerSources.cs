@@ -6,7 +6,7 @@ using System.IO;
 using Spellbound.Core.Operations;
 using UnityEngine;
 
-namespace Spellbound.Core.Ledger.Editor {
+namespace Spellbound.Core.UnityLedger {
     public static class LedgerSources {
         public const string ProjectLedgerPattern = "*.md";
 
@@ -40,6 +40,43 @@ namespace Spellbound.Core.Ledger.Editor {
 
             names.AddRange(ProjectFiles(settings));
             return names;
+        }
+
+        public static IReadOnlyList<string> RowsIn(string agentContextText) {
+            var rows = new List<string>();
+            var section = AgentContextFile.Section(agentContextText, AgentContextFile.LedgerHeading);
+
+            if (section == null) {
+                return null;
+            }
+
+            var tableRows = new Dictionary<int, LedgerRow>();
+
+            foreach (var row in LedgerTable.Parse(section, AgentContextFile.FileName)) {
+                tableRows[row.Line] = row;
+            }
+
+            var lines = section.Split('\n');
+
+            for (var i = 0; i < lines.Length; i++) {
+                var trimmed = lines[i].Trim();
+
+                if (trimmed.StartsWith("- ", StringComparison.Ordinal)) {
+                    rows.Add(trimmed.Substring(2).Trim());
+                    continue;
+                }
+
+                if (!LedgerTable.IsTableRow(trimmed) || LedgerTable.IsHeader(trimmed)
+                    || LedgerTable.IsSeparator(trimmed)) {
+                    continue;
+                }
+
+                rows.Add(tableRows.TryGetValue(i + 1, out var parsed)
+                    ? parsed + " (" + parsed.UnityItem + ")"
+                    : trimmed);
+            }
+
+            return rows;
         }
 
         public static string ProjectFolder(OperationSettings settings) {
