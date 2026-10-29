@@ -30,6 +30,69 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void TwoTypesWithOneShortNameAreToldApartByNamespaceAndPickedByType() {
+            var field = new TypePickerField("Shape", typeof(TypePickerClashShape));
+            Assert.AreEqual(new[] { typeof(PickerPlane.Square), typeof(PickerSolid.Square) }, field.Choices);
+            var labels = new List<string> {
+                TypePickerField.NoneLabel, "Square (Spellbound.Core.Tests.PickerPlane)",
+                "Square (Spellbound.Core.Tests.PickerSolid)"
+            };
+            Assert.AreEqual(labels, field.Labels);
+            var dropdown = field.Q<DropdownField>();
+            Assert.AreEqual(labels, dropdown.choices);
+            field.value = typeof(PickerSolid.Square);
+            Assert.AreEqual(2, dropdown.index);
+            Assert.AreEqual(labels[2], dropdown.value);
+            field.value = typeof(PickerPlane.Square);
+            Assert.AreEqual(1, dropdown.index);
+        }
+
+        [Test]
+        public void ChoosingTheSecondOfTwoSameNamedTypesPicksTheSecond() {
+            var field = new TypePickerField("Shape", typeof(TypePickerClashShape));
+            var received = new List<Type>();
+            field.RegisterValueChangedCallback(change => received.Add(change.newValue));
+            var window = ControlTestWindow.Open(field);
+
+            try {
+                field.Q<DropdownField>().value = field.Labels[2];
+                Assert.AreEqual(new[] { typeof(PickerSolid.Square) }, received);
+                Assert.AreEqual(typeof(PickerSolid.Square), field.value);
+            }
+            finally {
+                window.Close();
+            }
+        }
+
+        [Test]
+        public void AParameterlessPickerOffersNothingUntilABaseTypeIsNamed() {
+            var field = new TypePickerField();
+            Assert.IsNull(field.BaseType);
+            Assert.IsNull(field.BaseTypeName);
+            CollectionAssert.IsEmpty(field.Choices);
+            Assert.AreEqual(new List<string> { TypePickerField.NoneLabel }, field.Q<DropdownField>().choices);
+            field.BaseTypeName = typeof(Shape).AssemblyQualifiedName;
+            Assert.AreEqual(typeof(Shape), field.BaseType);
+            Assert.AreEqual(new[] { typeof(Circle), typeof(Square) }, field.Choices);
+            Assert.IsTrue(field.styleSheets.Contains(ControlStyleSheet.Default));
+        }
+
+        [Test]
+        public void TypePickerField_CustomImplementation() {
+            var field = new BracketedPicker("Shape", typeof(TypePickerClashShape));
+            Assert.AreEqual("Square [Spellbound.Core.Tests.PickerPlane]", field.Labels[1]);
+            Assert.AreEqual("Square [Spellbound.Core.Tests.PickerSolid]", field.Labels[2]);
+        }
+
+        private sealed class BracketedPicker : TypePickerField {
+            public BracketedPicker(string label, Type baseType) : base(label, baseType) { }
+
+            protected override string QualifiedLabel(Type type, string label) {
+                return label + " [" + type.Namespace + "]";
+            }
+        }
+
+        [Test]
         public void ABaseTypeIsRequired() {
             Assert.Throws<ArgumentNullException>(() => new TypePickerField("Shape", null));
         }
@@ -79,5 +142,22 @@ namespace Spellbound.Core.Tests {
                 window.Close();
             }
         }
+    }
+
+    [System.Serializable]
+    internal abstract class TypePickerClashShape { }
+}
+
+namespace Spellbound.Core.Tests.PickerPlane {
+    [System.Serializable]
+    internal sealed class Square : TypePickerClashShape {
+        public int sides;
+    }
+}
+
+namespace Spellbound.Core.Tests.PickerSolid {
+    [System.Serializable]
+    internal sealed class Square : TypePickerClashShape {
+        public int sides;
     }
 }

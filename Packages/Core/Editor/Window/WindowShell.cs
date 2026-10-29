@@ -14,6 +14,7 @@ namespace Spellbound.Core.Window.Editor {
         public const string SelectedPageClassName = PageClassName + "--selected";
         public const string BodyClassName = ClassName + "__body";
         public const string HeaderClassName = ClassName + "__header";
+        public const string PageControlsClassName = ClassName + "__page-controls";
         public const string ContentClassName = ClassName + "__content";
         public const string EmptyClassName = ClassName + "__empty";
         public const string FailureClassName = ClassName + "__failure";
@@ -23,27 +24,30 @@ namespace Spellbound.Core.Window.Editor {
         private readonly Dictionary<string, WindowPage> _created = new Dictionary<string, WindowPage>();
         private readonly Dictionary<string, Button> _buttons = new Dictionary<string, Button>();
 
-        public WindowShell(WindowPages pages, string selectedTitle = null) {
+        public WindowShell(WindowPages pages, string selectedTitle = null, StyleSheet styleSheet = null) {
             _pages = pages ?? WindowPages.Default;
             AddToClassList(ClassName);
-            style.flexDirection = FlexDirection.Row;
-            style.flexGrow = 1;
-            PageList = new VisualElement();
+            ControlStyleSheet.Apply(this);
+
+            if (styleSheet != null) {
+                styleSheets.Add(styleSheet);
+            }
+
+            PageList = CreatePageList();
             PageList.AddToClassList(PagesClassName);
-            PageList.style.flexDirection = FlexDirection.Column;
             Add(PageList);
-            var body = new VisualElement();
-            body.AddToClassList(BodyClassName);
-            body.style.flexGrow = 1;
-            body.style.flexShrink = 1;
-            Add(body);
-            Header = new HeaderBar();
+            Body = CreateBody();
+            Body.AddToClassList(BodyClassName);
+            Add(Body);
+            Header = CreateHeader();
             Header.AddToClassList(HeaderClassName);
-            body.Add(Header);
-            Content = new VisualElement();
+            Body.Add(Header);
+            PageControls = CreatePageControls();
+            PageControls.AddToClassList(PageControlsClassName);
+            Header.Add(PageControls);
+            Content = CreateContent();
             Content.AddToClassList(ContentClassName);
-            Content.style.flexGrow = 1;
-            body.Add(Content);
+            Body.Add(Content);
             BuildPageList();
 
             if (!Select(selectedTitle) && _pages.Pages.Count > 0) {
@@ -54,7 +58,9 @@ namespace Spellbound.Core.Window.Editor {
         public event Action<string> PageSelected;
 
         public VisualElement PageList { get; }
+        public VisualElement Body { get; }
         public HeaderBar Header { get; }
+        public VisualElement PageControls { get; }
         public VisualElement Content { get; }
         public string SelectedTitle { get; private set; }
         public WindowPage CurrentPage { get; private set; }
@@ -73,6 +79,7 @@ namespace Spellbound.Core.Window.Editor {
 
             Notify(CurrentPage, false);
             Content.Clear();
+            PageControls.Clear();
             SelectedTitle = description.Title;
             Header.Title = description.Title;
             CurrentPage = PageFor(description);
@@ -80,6 +87,12 @@ namespace Spellbound.Core.Window.Editor {
 
             if (CurrentPage != null) {
                 Content.Add(ContentOf(CurrentPage));
+                var controls = HeaderControlsOf(CurrentPage);
+
+                if (controls != null) {
+                    PageControls.Add(controls);
+                }
+
                 Notify(CurrentPage, true);
             }
 
@@ -91,19 +104,51 @@ namespace Spellbound.Core.Window.Editor {
             Notify(CurrentPage, false);
         }
 
+        protected virtual VisualElement CreatePageList() {
+            return new VisualElement();
+        }
+
+        protected virtual VisualElement CreateBody() {
+            return new VisualElement();
+        }
+
+        protected virtual HeaderBar CreateHeader() {
+            return new HeaderBar();
+        }
+
+        protected virtual VisualElement CreateContent() {
+            return new VisualElement();
+        }
+
+        protected virtual VisualElement CreatePageControls() {
+            return new VisualElement();
+        }
+
+        protected virtual Button CreatePageButton(WindowPageDescription page) {
+            var title = page.Title;
+            return new Button(() => Select(title)) { text = title };
+        }
+
+        protected virtual Label CreateEmpty() {
+            return new Label(EmptyText);
+        }
+
+        protected virtual Label CreateFailure(string text) {
+            return new Label(text);
+        }
+
         private void BuildPageList() {
             if (_pages.Pages.Count == 0) {
-                var empty = new Label(EmptyText);
+                var empty = CreateEmpty();
                 empty.AddToClassList(EmptyClassName);
                 Content.Add(empty);
                 return;
             }
 
             foreach (var page in _pages.Pages) {
-                var title = page.Title;
-                var button = new Button(() => Select(title)) { text = title };
+                var button = CreatePageButton(page);
                 button.AddToClassList(PageClassName);
-                _buttons[title] = button;
+                _buttons[page.Title] = button;
                 PageList.Add(button);
             }
         }
@@ -151,7 +196,7 @@ namespace Spellbound.Core.Window.Editor {
             }
         }
 
-        private static VisualElement ContentOf(WindowPage page) {
+        private VisualElement ContentOf(WindowPage page) {
             try {
                 return page.CreateContent() ?? new VisualElement();
             }
@@ -161,10 +206,20 @@ namespace Spellbound.Core.Window.Editor {
             }
         }
 
-        private static Label Failure(string text) {
-            var label = new Label(text);
+        private VisualElement HeaderControlsOf(WindowPage page) {
+            try {
+                return page.CreateHeaderControls();
+            }
+            catch (Exception exception) {
+                Log.Error("The window page " + page.Title + " could not draw its header controls: "
+                          + exception.Message);
+                return null;
+            }
+        }
+
+        private Label Failure(string text) {
+            var label = CreateFailure(text);
             label.AddToClassList(FailureClassName);
-            label.style.whiteSpace = WhiteSpace.Normal;
             return label;
         }
     }

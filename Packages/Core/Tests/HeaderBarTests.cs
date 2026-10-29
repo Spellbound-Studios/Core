@@ -48,6 +48,23 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual(2, header.hierarchy.childCount);
         }
 
+        [Test]
+        public void HeaderBar_CustomImplementation() {
+            var header = new TaggedHeaderBar("Tagged");
+            Assert.AreEqual("tagged-title", header.Q<Label>(className: HeaderBar.TitleClassName).name);
+            Assert.AreEqual("tagged-actions", header.Actions.name);
+            Assert.AreEqual("Tagged", header.Title);
+            Assert.IsTrue(header.styleSheets.Contains(ControlStyleSheet.Default));
+        }
+
+        private sealed class TaggedHeaderBar : HeaderBar {
+            public TaggedHeaderBar(string title) : base(title) { }
+
+            protected override Label CreateTitle(string title) => new Label(title) { name = "tagged-title" };
+
+            protected override VisualElement CreateActions() => new VisualElement { name = "tagged-actions" };
+        }
+
         private static void AssertModifiers(HeaderBar header, bool error, bool warning, bool information) {
             Assert.AreEqual(error, header.ClassListContains(HeaderBar.ErrorClassName));
             Assert.AreEqual(warning, header.ClassListContains(HeaderBar.WarningClassName));

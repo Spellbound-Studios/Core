@@ -42,6 +42,18 @@ namespace Spellbound.Core.Window.Editor {
             _default = null;
         }
 
+        [InitializeOnLoadMethod]
+        private static void ResetOnPlayModeEntry() {
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+        }
+
+        private static void OnPlayModeStateChanged(PlayModeStateChange state) {
+            if (state == PlayModeStateChange.ExitingEditMode) {
+                Reset();
+            }
+        }
+
         public WindowPageDescription Find(string title) {
             if (string.IsNullOrWhiteSpace(title)) {
                 return null;

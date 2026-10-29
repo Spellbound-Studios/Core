@@ -73,18 +73,68 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void AtMostTwoButtonsAndOnlyOnAFindingWithAFixCode() {
+        public void AtMostTwoButtonsByDefaultAndOnlyOnAFindingWithAFixCode() {
             _view.ActionsFor = ThreeActions;
             _view.Rebind();
             var rows = _view.FindingRows;
             var buttons = rows[0].Query<Button>().ToList();
-            Assert.AreEqual(ReportView.MaximumActions, buttons.Count);
+            Assert.AreEqual(ReportView.DefaultMaximumActions, _view.MaximumActions);
+            Assert.AreEqual(2, buttons.Count);
             Assert.AreEqual("First", buttons[0].text);
             Assert.AreEqual("Second", buttons[1].text);
             Assert.IsTrue(buttons[0].ClassListContains(ReportView.ActionClassName));
             Assert.IsTrue(buttons[0].parent.ClassListContains(ReportView.ActionsClassName));
             Assert.AreEqual(0, rows[1].Query<Button>().ToList().Count);
             Assert.AreEqual(0, rows[2].Query<Button>().ToList().Count);
+        }
+
+        [Test]
+        public void TheActionCapIsAParameterAndZeroLiftsIt() {
+            _view.ActionsFor = ThreeActions;
+            _view.MaximumActions = 1;
+            _view.Rebind();
+            Assert.AreEqual(1, _view.FindingRows[0].Query<Button>().ToList().Count);
+            _view.MaximumActions = 0;
+            _view.Rebind();
+            Assert.AreEqual(3, _view.FindingRows[0].Query<Button>().ToList().Count);
+        }
+
+        [Test]
+        public void ReportView_CustomImplementation() {
+            var view = new TaggedReportView { ActionsFor = ThreeActions, MaximumActions = 0 };
+            view.Bind(_report, new[] { OwnValidation });
+            Assert.AreEqual("tagged-banner", view.Banner.name);
+            Assert.AreEqual("tagged-checks", view.Q<Label>(className: ReportView.ChecksClassName).name);
+            Assert.AreEqual("tagged-row", view.FindingRows[0].name);
+            Assert.AreEqual("tagged-text", view.FindingRows[0].Q<Label>(className: ReportView.CodeClassName).name);
+            var actions = view.FindingRows[0].Q<VisualElement>(className: ReportView.ActionsClassName);
+            Assert.AreEqual("tagged-actions", actions.name);
+            Assert.AreEqual(3, actions.childCount);
+            Assert.AreEqual("tagged-button", actions[0].name);
+            Assert.IsTrue(view.styleSheets.Contains(ControlStyleSheet.Default));
+            var empty = new TaggedReportView();
+            empty.Bind(new ValidationReport(Subject));
+            Assert.AreEqual("tagged-empty", empty.Q<Label>(className: ReportView.EmptyClassName).name);
+        }
+
+        private sealed class TaggedReportView : ReportView {
+            protected override HeaderBar CreateBanner() => new HeaderBar { name = "tagged-banner" };
+
+            protected override Label CreateChecksLine(string text) => new Label(text) { name = "tagged-checks" };
+
+            protected override Label CreateEmpty() => new Label(EmptyText) { name = "tagged-empty" };
+
+            protected override VisualElement CreateRow(ValidationFinding finding) =>
+                new VisualElement { name = "tagged-row" };
+
+            protected override Label CreateText(string text, string className) =>
+                new Label(text) { name = "tagged-text" };
+
+            protected override VisualElement CreateActions(ValidationFinding finding) =>
+                new VisualElement { name = "tagged-actions" };
+
+            protected override Button CreateActionButton(ValidationFinding finding, FindingAction action) =>
+                new Button(() => action.Run(finding)) { name = "tagged-button", text = action.Label };
         }
 
         [Test]
