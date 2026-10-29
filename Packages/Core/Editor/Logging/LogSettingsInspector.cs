@@ -11,6 +11,7 @@ namespace Spellbound.Core.Logging.Editor {
     [CustomEditor(typeof(LogConfig))]
     public sealed class LogSettingsInspector : UnityEditor.Editor {
         public const string ClassName = "sb-log-settings";
+        public const string CardClassName = ClassName + "__card";
         public const string SubtitleClassName = ClassName + "__subtitle";
         public const string LevelDescriptionClassName = ClassName + "__level-description";
         public const string SinksClassName = ClassName + "__sinks";
@@ -44,10 +45,6 @@ namespace Spellbound.Core.Logging.Editor {
         private const string WarningDescription = "Compiles Warning and Error only. Strips Info and below.";
         private const string ErrorDescription = "Error only. All other log calls are stripped from the build.";
         private const string NoneDescription = "Strips all log calls except Error. Equivalent to Error.";
-        private const float CardSpacing = 4f;
-        private const float FilterIndent = 15f;
-        private const float ApplySpacing = 8f;
-        private const float ApplyHeight = 28f;
 
         private Label _applied;
 
@@ -72,6 +69,7 @@ namespace Spellbound.Core.Logging.Editor {
 
             var root = new VisualElement();
             root.AddToClassList(ClassName);
+            EditorLook.Dress(root);
             root.Add(new HeaderBar(HeaderLabel));
             root.Add(Card(LevelCardName, GlobalLabel, Line(LevelSubtitle, SubtitleClassName), levelField,
                 description));
@@ -109,8 +107,6 @@ namespace Spellbound.Core.Logging.Editor {
         private Button ApplyButton() {
             var button = new Button(Apply) { text = ApplyLabel };
             button.AddToClassList(ApplyClassName);
-            button.style.marginTop = ApplySpacing;
-            button.style.height = ApplyHeight;
             return button;
         }
 
@@ -160,7 +156,6 @@ namespace Spellbound.Core.Logging.Editor {
             var filterLevel = entry.FindPropertyRelative(nameof(SinkEntry.filterLevel));
             var filter = new PopupField<LogLevel>(SinkFilterLabel) { userData = filterLevel };
             filter.AddToClassList(SinkFilterClassName);
-            filter.style.marginLeft = FilterIndent;
             ShowFilter(filter, globalLevel);
             filter.RegisterValueChangedCallback(change => {
                 filterLevel.intValue = (int)change.newValue;
@@ -210,13 +205,12 @@ namespace Spellbound.Core.Logging.Editor {
         private static Label Line(string text, string className) {
             var label = new Label(text);
             label.AddToClassList(className);
-            label.style.whiteSpace = WhiteSpace.Normal;
             return label;
         }
 
         private static SectionCard Card(string name, string title, params VisualElement[] children) {
             var card = new SectionCard(title) { name = name };
-            card.style.marginTop = CardSpacing;
+            card.AddToClassList(CardClassName);
 
             foreach (var child in children) {
                 card.Add(child);

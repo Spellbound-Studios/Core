@@ -62,7 +62,8 @@ namespace Spellbound.Core.Tests {
             StringAssert.StartsWith("succeeded: ", text);
             StringAssert.Contains("AGENTS.md\n", text);
             StringAssert.Contains("- `fixture echo --text <text>`", GeneratedBlock.Body(text, AgentContextBlocks.OperationsBlock));
-            StringAssert.Contains("- `FixtureOtherKit` in `Spellbound.Fixture.Other`", GeneratedBlock.Body(text, AgentContextBlocks.DoorsBlock));
+            Assert.IsNull(GeneratedBlock.Body(text, AgentContextBlocks.DoorsBlock));
+            StringAssert.DoesNotContain("FixtureOtherKit", text);
         }
 
         [Test]

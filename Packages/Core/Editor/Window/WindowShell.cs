@@ -16,6 +16,7 @@ namespace Spellbound.Core.Window.Editor {
         public const string HeaderClassName = ClassName + "__header";
         public const string PageControlsClassName = ClassName + "__page-controls";
         public const string ContentClassName = ClassName + "__content";
+        public const string FooterClassName = ClassName + "__footer";
         public const string EmptyClassName = ClassName + "__empty";
         public const string FailureClassName = ClassName + "__failure";
         public const string EmptyText = "No pages are installed in this project.";
@@ -24,15 +25,10 @@ namespace Spellbound.Core.Window.Editor {
         private readonly Dictionary<string, WindowPage> _created = new Dictionary<string, WindowPage>();
         private readonly Dictionary<string, Button> _buttons = new Dictionary<string, Button>();
 
-        public WindowShell(WindowPages pages, string selectedTitle = null, StyleSheet styleSheet = null) {
+        public WindowShell(WindowPages pages, string selectedTitle = null) {
             _pages = pages ?? WindowPages.Default;
             AddToClassList(ClassName);
             ControlStyleSheet.Apply(this);
-
-            if (styleSheet != null) {
-                styleSheets.Add(styleSheet);
-            }
-
             PageList = CreatePageList();
             PageList.AddToClassList(PagesClassName);
             Add(PageList);
@@ -48,6 +44,10 @@ namespace Spellbound.Core.Window.Editor {
             Content = CreateContent();
             Content.AddToClassList(ContentClassName);
             Body.Add(Content);
+            Footer = CreateFooter();
+            Footer.AddToClassList(FooterClassName);
+            Body.Add(Footer);
+            ShowPageSurface(null);
             BuildPageList();
 
             if (!Select(selectedTitle) && _pages.Pages.Count > 0) {
@@ -62,6 +62,7 @@ namespace Spellbound.Core.Window.Editor {
         public HeaderBar Header { get; }
         public VisualElement PageControls { get; }
         public VisualElement Content { get; }
+        public Label Footer { get; }
         public string SelectedTitle { get; private set; }
         public WindowPage CurrentPage { get; private set; }
         public IReadOnlyList<WindowPageDescription> Pages => _pages.Pages;
@@ -77,23 +78,29 @@ namespace Spellbound.Core.Window.Editor {
                 return true;
             }
 
-            Notify(CurrentPage, false);
+            Leave(CurrentPage);
             Content.Clear();
             PageControls.Clear();
             SelectedTitle = description.Title;
             Header.Title = description.Title;
-            CurrentPage = PageFor(description);
+            var page = PageFor(description);
+            CurrentPage = page;
             MarkSelected();
 
-            if (CurrentPage != null) {
-                Content.Add(ContentOf(CurrentPage));
-                var controls = HeaderControlsOf(CurrentPage);
+            if (page != null) {
+                page.SurfaceChanged += ShowPageSurface;
+                Content.Add(ContentOf(page));
+                var controls = HeaderControlsOf(page);
 
                 if (controls != null) {
                     PageControls.Add(controls);
                 }
+            }
 
-                Notify(CurrentPage, true);
+            ShowPageSurface(page);
+
+            if (page != null) {
+                Notify(page, true);
             }
 
             PageSelected?.Invoke(SelectedTitle);
@@ -101,7 +108,7 @@ namespace Spellbound.Core.Window.Editor {
         }
 
         public void Close() {
-            Notify(CurrentPage, false);
+            Leave(CurrentPage);
         }
 
         protected virtual VisualElement CreatePageList() {
@@ -124,6 +131,10 @@ namespace Spellbound.Core.Window.Editor {
             return new VisualElement();
         }
 
+        protected virtual Label CreateFooter() {
+            return new Label();
+        }
+
         protected virtual Button CreatePageButton(WindowPageDescription page) {
             var title = page.Title;
             return new Button(() => Select(title)) { text = title };
@@ -135,6 +146,26 @@ namespace Spellbound.Core.Window.Editor {
 
         protected virtual Label CreateFailure(string text) {
             return new Label(text);
+        }
+
+        private void Leave(WindowPage page) {
+            if (page == null) {
+                return;
+            }
+
+            page.SurfaceChanged -= ShowPageSurface;
+            Notify(page, false);
+        }
+
+        private void ShowPageSurface(WindowPage page) {
+            if (page != null && !ReferenceEquals(page, CurrentPage)) {
+                return;
+            }
+
+            Header.Sentence = page?.HeaderSentence ?? string.Empty;
+            Header.State = page?.HeaderState;
+            Footer.text = page?.FooterText ?? string.Empty;
+            Footer.style.display = string.IsNullOrEmpty(Footer.text) ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void BuildPageList() {

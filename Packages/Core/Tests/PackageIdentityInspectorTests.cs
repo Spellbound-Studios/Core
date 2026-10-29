@@ -150,7 +150,7 @@ namespace Spellbound.Core.Tests {
             _inspector.serializedObject.ApplyModifiedPropertiesWithoutUndo();
             report = _inspector.CreateInspectorGUI().Q<ReportView>(PackageIdentityInspector.ReportName);
             CollectionAssert.IsEmpty(CodesIn(report));
-            Assert.AreEqual(ReportView.EmptyText, report.Q<Label>(className: ReportView.EmptyClassName).text);
+            Assert.AreEqual(report.EmptyText, report.Q<Label>(className: ReportView.EmptyClassName).text);
         }
 
         [UnityTest]

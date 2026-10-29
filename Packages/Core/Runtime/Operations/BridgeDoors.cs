@@ -13,8 +13,10 @@ namespace Spellbound.Core.Operations {
 
         private const BindingFlags PublicStatic = BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
 
+        public static Func<IEnumerable<Assembly>> AssemblySource { get; set; }
+
         public static IReadOnlyList<BridgeDoor> Find() {
-            return Find(AssemblyScanning.ScannableAssemblies());
+            return Find(AssemblySource?.Invoke() ?? AssemblyScanning.ScannableAssemblies());
         }
 
         public static IReadOnlyList<BridgeDoor> Find(IEnumerable<Assembly> assemblies) {
