@@ -1,3 +1,16 @@
+* text=auto
+*.cs text eol=crlf
+*.asmdef text eol=crlf
+*.asmref text eol=crlf
+*.json text eol=crlf
+*.uss text eol=crlf
+*.uxml text eol=crlf
+*.md text eol=crlf
+*.yml text eol=crlf
+*.yaml text eol=crlf
+*.sh text eol=lf
+.githooks/* text eol=lf
+
 Assets/_Project/**/*.fbx filter=lfs diff=lfs merge=lfs -text
 Assets/_Project/**/*.FBX filter=lfs diff=lfs merge=lfs -text
 Assets/_Project/**/*.obj filter=lfs diff=lfs merge=lfs -text
