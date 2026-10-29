@@ -73,7 +73,8 @@ namespace Spellbound.Core.Logging {
             }
         }
 
-        public void Emit(LogLevel level, string source, string message, string member, int line) {
+        public void Emit(LogLevel level, string source, string message, string member, int line,
+            UnityEngine.Object context) {
             if (!_initialized)
                 return;
 

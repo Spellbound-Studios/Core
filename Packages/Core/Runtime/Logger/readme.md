@@ -62,7 +62,8 @@ public class TelemetrySink : ILogSink {
         // Your initialization
     }
 
-    public void Emit(LogLevel level, string source, string message, string member, int line) {
+    public void Emit(LogLevel level, string source, string message, string member, int line,
+        UnityEngine.Object context) {
         // Your example code
     }
 }
@@ -102,7 +103,7 @@ using (Log.AddScopedSink(sink, config, LogLevel.Verbose)) {
 }
 ```
 
-`Log.ClearSinks` drops every registration without restoring. `LogBootstrap` calls it before registering, so entering play mode with domain reload disabled re-registers rather than stacking a second copy of every sink, and it calls it again on returning to edit mode so play-mode sinks do not outlive the session.
+`Log.ClearSinks` drops every registration without restoring. `LogBootstrap` calls it before registering, so entering play mode with domain reload disabled re-registers rather than stacking a second copy of every sink, and it calls it again on returning to edit mode so play-mode sinks do not outlive the session. Outside play mode `LogBootstrap` keeps one `UnityConsoleSink` registered (`LogBootstrap.EditModeSink`), so a line logged from editor code reaches the Unity console with the context object the caller gave.
 ## Tallying Sink
 
 `TallyingLogSink` keeps one entry per distinct message with a count instead of writing anything. Its constructor takes the maximum number of distinct entries, so it is not reflection-discoverable; register it yourself and `Drain` it on your own schedule. Messages arriving once the cap is reached are counted in `DroppedCount`, which `Drain(out int droppedCount)` returns and resets. It is safe to emit into from background threads.

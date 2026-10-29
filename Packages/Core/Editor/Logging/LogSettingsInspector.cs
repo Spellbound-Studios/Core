@@ -132,7 +132,7 @@ namespace Spellbound.Core.Logging.Editor {
                 _applied.text = text;
             }
 
-            Log.Info(text);
+            Log.Emit(LogLevel.Info, text);
         }
 
         private static string AppliedText(LogLevel level, string target) {

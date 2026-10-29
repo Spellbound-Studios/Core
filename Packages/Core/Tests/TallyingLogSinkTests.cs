@@ -8,7 +8,7 @@ using Spellbound.Core.Logging;
 namespace Spellbound.Core.Tests {
     public class TallyingLogSinkTests {
         private static void Emit(TallyingLogSink sink, LogLevel level, string message, int line = 0) =>
-                sink.Emit(level, "TallyingLogSinkTests", message, nameof(Emit), line);
+                sink.Emit(level, "TallyingLogSinkTests", message, nameof(Emit), line, null);
 
         [Test]
         public void RepeatedMessageCountsUpAsOneEntry() {
