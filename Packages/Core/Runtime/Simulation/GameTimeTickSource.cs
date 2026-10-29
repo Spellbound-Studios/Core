@@ -7,6 +7,10 @@ namespace Spellbound.Core.Simulation {
         private const long MicrosecondsPerSecond = 1_000_000L;
 
         public GameTimeTickSource(TickRate rate) {
+            if (!(rate.TicksPerSecond > 0)) {
+                throw new ArgumentException("A tick source needs a rate made by TickRate.PerSecond.", nameof(rate));
+            }
+
             Rate = rate;
         }
 
