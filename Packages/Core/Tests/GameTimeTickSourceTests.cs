@@ -7,6 +7,11 @@ using Spellbound.Core.Simulation;
 namespace Spellbound.Core.Tests {
     public class GameTimeTickSourceTests {
         [Test]
+        public void ADefaultRateIsRefused() {
+            Assert.Throws<ArgumentException>(() => new GameTimeTickSource(default));
+        }
+
+        [Test]
         public void FiftyStepsOfTwentyMillisecondsAtTwentyGiveTwentyTicks() {
             Assert.AreEqual(new Tick(20), TicksAfter(20, 0.02, 50));
         }

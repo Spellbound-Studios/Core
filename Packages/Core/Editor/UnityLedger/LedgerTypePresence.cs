@@ -1,6 +1,6 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
-namespace Spellbound.Core.Ledger {
+namespace Spellbound.Core.UnityLedger {
     public enum LedgerTypePresence {
         Present,
         Absent,

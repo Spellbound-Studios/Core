@@ -9,7 +9,11 @@ namespace Spellbound.Core.Simulation {
         internal TickClock Clock { get; private set; }
 
         internal static TickClockDriver Attach(TickClock clock) {
-            var host = new GameObject(ObjectName) { hideFlags = HideFlags.HideInHierarchy };
+            var host = new GameObject(ObjectName) {
+                hideFlags = Application.isPlaying
+                    ? HideFlags.HideInHierarchy
+                    : HideFlags.HideInHierarchy | HideFlags.DontSave
+            };
 
             if (Application.isPlaying) {
                 DontDestroyOnLoad(host);

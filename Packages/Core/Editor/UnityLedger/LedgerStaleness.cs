@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Spellbound.Core.Ledger {
+namespace Spellbound.Core.UnityLedger {
     public static class LedgerStaleness {
         public const string DocumentationAddress = "https://docs.unity3d.com/";
         public const string DocumentationSearchPage = "/Documentation/Manual/30_search.html?q=";

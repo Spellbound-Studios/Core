@@ -112,9 +112,16 @@ namespace Spellbound.Core.Tests {
         }
 
         private static string ConditionOf(string methodName) {
-            var method = typeof(Log).GetMethod(methodName, BindingFlags.Public | BindingFlags.Static);
-            Assert.IsNotNull(method, methodName);
-            return method.GetCustomAttribute<ConditionalAttribute>()?.ConditionString;
+            var plain = typeof(Log).GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null,
+                new[] { typeof(string), typeof(string), typeof(string), typeof(int) }, null);
+            var withContext = typeof(Log).GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null,
+                new[] { typeof(string), typeof(UnityEngine.Object), typeof(string), typeof(string), typeof(int) }, null);
+            Assert.IsNotNull(plain, methodName);
+            Assert.IsNotNull(withContext, methodName + " with a context");
+            var condition = plain.GetCustomAttribute<ConditionalAttribute>()?.ConditionString;
+            Assert.AreEqual(condition, withContext.GetCustomAttribute<ConditionalAttribute>()?.ConditionString,
+                methodName);
+            return condition;
         }
     }
 }

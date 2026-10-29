@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Spellbound.Core.Controls.Editor;
 using Spellbound.Core.Logging;
 using Spellbound.Core.Window.Editor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Spellbound.Core.Tests {
@@ -218,6 +220,95 @@ namespace Spellbound.Core.Tests {
             CollectionAssert.AreEqual(new[] { "Calm", "Stubborn" }, selected);
             shell.Close();
             Assert.AreEqual(4, _recording.CountOf(LogLevel.Error));
+        }
+
+        [Test]
+        public void APageDrawsItsControlsInTheHeaderSlotUntilAnotherPageIsShown() {
+            var shell = new WindowShell(new WindowPages(new[] {
+                new WindowPageDescription(typeof(ControlledPage), "Controlled", 0),
+                new WindowPageDescription(typeof(CountingPage), "Plain", 1)
+            }));
+
+            Assert.AreSame(shell.Header.Actions, shell.PageControls.hierarchy.parent);
+            Assert.IsTrue(shell.PageControls.ClassListContains(WindowShell.PageControlsClassName));
+            var own = new Button { name = "own-control" };
+            shell.Header.Add(own);
+            Assert.IsNotNull(shell.PageControls.Q<Button>(ControlledPage.ControlName));
+            shell.Select("Plain");
+            Assert.AreEqual(0, shell.PageControls.childCount);
+            Assert.AreSame(shell.Header.Actions, own.hierarchy.parent);
+            shell.Select("Controlled");
+            Assert.IsNotNull(shell.PageControls.Q<Button>(ControlledPage.ControlName));
+        }
+
+        [Test]
+        public void AConsumerStyleSheetIsAppliedAfterTheControlSheet() {
+            var sheet = ScriptableObject.CreateInstance<StyleSheet>();
+
+            try {
+                var shell = new WindowShell(ThreePages(), null, sheet);
+                Assert.IsTrue(shell.styleSheets.Contains(ControlStyleSheet.Default));
+                Assert.IsTrue(shell.styleSheets.Contains(sheet));
+                Assert.AreSame(sheet, shell.styleSheets[shell.styleSheets.count - 1]);
+            }
+            finally {
+                UnityEngine.Object.DestroyImmediate(sheet);
+            }
+        }
+
+        [Test]
+        public void WindowShell_CustomImplementation() {
+            var shell = new TaggedShell(ThreePages());
+            Assert.AreEqual("tagged-pages", shell.PageList.name);
+            Assert.AreEqual("tagged-body", shell.Body.name);
+            Assert.AreEqual("tagged-header", shell.Header.name);
+            Assert.AreEqual("tagged-content", shell.Content.name);
+            Assert.AreEqual("tagged-page-controls", shell.PageControls.name);
+            Assert.AreEqual("tagged-button", shell.PageList.Q<Button>().name);
+            var empty = new TaggedShell(new WindowPages(Array.Empty<WindowPageDescription>()));
+            Assert.AreEqual("tagged-empty", empty.Content.Q<Label>(className: WindowShell.EmptyClassName).name);
+            var broken = new TaggedShell(new WindowPages(new[] {
+                new WindowPageDescription(typeof(DrawingFailurePage), "Broken", 0)
+            }));
+            Assert.AreEqual("tagged-failure", broken.Content.Q<Label>(className: WindowShell.FailureClassName).name);
+            Assert.AreEqual(1, _recording.CountOf(LogLevel.Error));
+        }
+
+        private sealed class ControlledPage : WindowPage {
+            public const string ControlName = "page-control";
+
+            public override VisualElement CreateContent() {
+                return new Label(Title) { name = ContentName };
+            }
+
+            public override VisualElement CreateHeaderControls() {
+                return new Button { name = ControlName, text = "Refresh" };
+            }
+        }
+
+        private sealed class TaggedShell : WindowShell {
+            public TaggedShell(WindowPages pages) : base(pages) { }
+
+            protected override VisualElement CreatePageList() => new VisualElement { name = "tagged-pages" };
+
+            protected override VisualElement CreateBody() => new VisualElement { name = "tagged-body" };
+
+            protected override HeaderBar CreateHeader() => new HeaderBar { name = "tagged-header" };
+
+            protected override VisualElement CreateContent() => new VisualElement { name = "tagged-content" };
+
+            protected override VisualElement CreatePageControls() =>
+                new VisualElement { name = "tagged-page-controls" };
+
+            protected override Button CreatePageButton(WindowPageDescription page) {
+                var button = base.CreatePageButton(page);
+                button.name = "tagged-button";
+                return button;
+            }
+
+            protected override Label CreateEmpty() => new Label(EmptyText) { name = "tagged-empty" };
+
+            protected override Label CreateFailure(string text) => new Label(text) { name = "tagged-failure" };
         }
 
         private static WindowPages ThreePages() {

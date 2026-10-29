@@ -4,10 +4,6 @@ using System;
 using UnityEngine;
 
 namespace Spellbound.Core.Logging {
-    /// <summary>
-    /// Loads LogConfig from Resources at startup and registers all enabled sinks.
-    /// Runs before any Awake or scene load via SubsystemRegistration.
-    /// </summary>
     public static class LogBootstrap {
         private const string ConfigResourcePath = "LogConfig";
         private const string BootstrapSource = "LogBootstrap";
@@ -35,10 +31,15 @@ namespace Spellbound.Core.Logging {
         }
 
 #if UNITY_EDITOR
+        public static ILogSink EditModeSink { get; private set; }
+
         [UnityEditor.InitializeOnLoadMethod]
-        private static void SubscribeToPlayModeExit() {
+        private static void InitializeInEditor() {
             UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
+            if (!UnityEditor.EditorApplication.isPlayingOrWillChangePlaymode)
+                RegisterEditModeSink();
         }
 
         private static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state) {
@@ -47,6 +48,30 @@ namespace Spellbound.Core.Logging {
 
             UnityLogCapture.Stop();
             Log.ClearSinks();
+            RegisterEditModeSink();
+        }
+
+        public static void RegisterEditModeSink() {
+            if (EditModeSink != null)
+                Log.RemoveSink(EditModeSink);
+
+            var config = Resources.Load<LogConfig>(ConfigResourcePath);
+            EditModeSink = new UnityConsoleSink();
+            Log.AddSink(EditModeSink, config, EditModeFilterLevel(config));
+        }
+
+        private static LogLevel EditModeFilterLevel(LogConfig config) {
+            if (config == null || config.sinks == null)
+                return LogLevel.Verbose;
+
+            var consoleSinkTypeName = typeof(UnityConsoleSink).AssemblyQualifiedName;
+
+            foreach (var entry in config.sinks) {
+                if (string.Equals(entry.qualifiedTypeName, consoleSinkTypeName, StringComparison.Ordinal))
+                    return entry.filterLevel;
+            }
+
+            return LogLevel.Verbose;
         }
 #endif
 
@@ -94,4 +119,4 @@ namespace Spellbound.Core.Logging {
             }
         }
     }
-}
+}

@@ -3,6 +3,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace Spellbound.Core.Logging {
     public static class Log {
@@ -127,7 +128,17 @@ namespace Spellbound.Core.Logging {
             [CallerMemberName] string member = "",
             [CallerLineNumber] int line = 0
         ) =>
-                Emit(LogLevel.Verbose, message, file, member, line);
+                Emit(LogLevel.Verbose, message, null, file, member, line);
+
+        [Conditional("SPELLBOUND_LOG_VERBOSE")]
+        public static void Verbose(
+            string message,
+            Object context,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) =>
+                Emit(LogLevel.Verbose, message, context, file, member, line);
 
         [Conditional("SPELLBOUND_LOG_DEBUG")]
         public static void Debug(
@@ -136,7 +147,17 @@ namespace Spellbound.Core.Logging {
             [CallerMemberName] string member = "",
             [CallerLineNumber] int line = 0
         ) =>
-                Emit(LogLevel.Debug, message, file, member, line);
+                Emit(LogLevel.Debug, message, null, file, member, line);
+
+        [Conditional("SPELLBOUND_LOG_DEBUG")]
+        public static void Debug(
+            string message,
+            Object context,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) =>
+                Emit(LogLevel.Debug, message, context, file, member, line);
 
         [Conditional("SPELLBOUND_LOG_INFO")]
         public static void Info(
@@ -145,7 +166,17 @@ namespace Spellbound.Core.Logging {
             [CallerMemberName] string member = "",
             [CallerLineNumber] int line = 0
         ) =>
-                Emit(LogLevel.Info, message, file, member, line);
+                Emit(LogLevel.Info, message, null, file, member, line);
+
+        [Conditional("SPELLBOUND_LOG_INFO")]
+        public static void Info(
+            string message,
+            Object context,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) =>
+                Emit(LogLevel.Info, message, context, file, member, line);
 
         [Conditional("SPELLBOUND_LOG_WARNING")]
         public static void Warn(
@@ -154,7 +185,17 @@ namespace Spellbound.Core.Logging {
             [CallerMemberName] string member = "",
             [CallerLineNumber] int line = 0
         ) =>
-                Emit(LogLevel.Warning, message, file, member, line);
+                Emit(LogLevel.Warning, message, null, file, member, line);
+
+        [Conditional("SPELLBOUND_LOG_WARNING")]
+        public static void Warn(
+            string message,
+            Object context,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) =>
+                Emit(LogLevel.Warning, message, context, file, member, line);
 
         public static void Error(
             string message,
@@ -162,9 +203,34 @@ namespace Spellbound.Core.Logging {
             [CallerMemberName] string member = "",
             [CallerLineNumber] int line = 0
         ) =>
-                Emit(LogLevel.Error, message, file, member, line);
+                Emit(LogLevel.Error, message, null, file, member, line);
 
-        public static void Emit(LogLevel level, string message, string file, string member, int line) {
+        public static void Error(
+            string message,
+            Object context,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) =>
+                Emit(LogLevel.Error, message, context, file, member, line);
+
+        public static void Emit(
+            LogLevel level,
+            string message,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) =>
+                Emit(level, message, null, file, member, line);
+
+        public static void Emit(
+            LogLevel level,
+            string message,
+            Object context,
+            [CallerFilePath] string file = "",
+            [CallerMemberName] string member = "",
+            [CallerLineNumber] int line = 0
+        ) {
             var sinks = _sinks;
 
             if (sinks.Length == 0)
@@ -179,7 +245,7 @@ namespace Spellbound.Core.Logging {
                         continue;
 
                     source ??= Path.GetFileNameWithoutExtension(file);
-                    sinks[i].Sink.Emit(level, source, message, member, line);
+                    sinks[i].Sink.Emit(level, source, message, member, line, context);
                 }
             }
             finally {
@@ -187,4 +253,4 @@ namespace Spellbound.Core.Logging {
             }
         }
     }
-}
+}

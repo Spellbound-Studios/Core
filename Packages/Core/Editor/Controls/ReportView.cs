@@ -7,7 +7,8 @@ using Spellbound.Core.Authoring.Editor;
 using UnityEngine.UIElements;
 
 namespace Spellbound.Core.Controls.Editor {
-    public class ReportView : VisualElement {
+    [UxmlElement]
+    public partial class ReportView : VisualElement {
         public const string ClassName = "sb-report";
         public const string ChecksClassName = ClassName + "__checks";
         public const string FindingClassName = ClassName + "__finding";
@@ -24,24 +25,32 @@ namespace Spellbound.Core.Controls.Editor {
         public const string CompactClassName = ClassName + "--compact";
         public const string EmptyClassName = ClassName + "__empty";
         public const string EmptyText = "no findings";
-        public const int MaximumActions = 2;
+        public const int DefaultMaximumActions = 2;
 
         private readonly List<VisualElement> _findingRows = new List<VisualElement>();
         private bool _compact;
 
         public ReportView() {
             AddToClassList(ClassName);
-            Banner = new HeaderBar();
+            ControlStyleSheet.Apply(this);
+            Banner = CreateBanner();
             Banner.AddToClassList(BannerClassName);
             Banner.RegisterCallback<ClickEvent>(_ => Compact = false);
         }
 
         public Func<ValidationFinding, IReadOnlyList<FindingAction>> ActionsFor { get; set; }
+
+        [UxmlAttribute]
         public string PreferredHint { get; set; }
+
+        [UxmlAttribute]
+        public int MaximumActions { get; set; } = DefaultMaximumActions;
+
         public ValidationRun Run { get; private set; }
         public HeaderBar Banner { get; }
         public IReadOnlyList<VisualElement> FindingRows => _findingRows;
 
+        [UxmlAttribute]
         public bool Compact {
             get => _compact;
             set {
@@ -86,6 +95,34 @@ namespace Spellbound.Core.Controls.Editor {
             }
         }
 
+        protected virtual HeaderBar CreateBanner() {
+            return new HeaderBar();
+        }
+
+        protected virtual Label CreateChecksLine(string text) {
+            return new Label(text);
+        }
+
+        protected virtual Label CreateEmpty() {
+            return new Label(EmptyText);
+        }
+
+        protected virtual VisualElement CreateRow(ValidationFinding finding) {
+            return new VisualElement { tooltip = finding.ToText() };
+        }
+
+        protected virtual Label CreateText(string text, string className) {
+            return new Label(text);
+        }
+
+        protected virtual VisualElement CreateActions(ValidationFinding finding) {
+            return new VisualElement();
+        }
+
+        protected virtual Button CreateActionButton(ValidationFinding finding, FindingAction action) {
+            return new Button(() => action.Run(finding)) { text = action.Label };
+        }
+
         private void BuildCompact() {
             var ordered = Run.Report.Ordered();
             var title = Run.Summary();
@@ -106,14 +143,13 @@ namespace Spellbound.Core.Controls.Editor {
         }
 
         private void BuildFull() {
-            var checks = new Label(Run.ChecksLine());
+            var checks = CreateChecksLine(Run.ChecksLine());
             checks.AddToClassList(ChecksClassName);
-            checks.style.whiteSpace = WhiteSpace.Normal;
             Add(checks);
             var ordered = Run.Report.Ordered();
 
             if (ordered.Count == 0) {
-                var empty = new Label(EmptyText);
+                var empty = CreateEmpty();
                 empty.AddToClassList(EmptyClassName);
                 Add(empty);
                 return;
@@ -127,7 +163,7 @@ namespace Spellbound.Core.Controls.Editor {
         }
 
         private VisualElement BuildRow(ValidationFinding finding) {
-            var row = new VisualElement { tooltip = finding.ToText() };
+            var row = CreateRow(finding);
             row.AddToClassList(FindingClassName);
             row.AddToClassList(ClassFor(finding.Severity));
             row.Add(TextLabel(finding.Code, CodeClassName));
@@ -161,12 +197,11 @@ namespace Spellbound.Core.Controls.Editor {
                 return null;
             }
 
-            var container = new VisualElement();
+            var container = CreateActions(finding);
             container.AddToClassList(ActionsClassName);
-            container.style.flexDirection = FlexDirection.Row;
 
             foreach (var action in actions) {
-                if (container.childCount == MaximumActions) {
+                if (MaximumActions > 0 && container.childCount == MaximumActions) {
                     break;
                 }
 
@@ -174,7 +209,7 @@ namespace Spellbound.Core.Controls.Editor {
                     continue;
                 }
 
-                var button = new Button(() => action.Run(finding)) { text = action.Label };
+                var button = CreateActionButton(finding, action);
                 button.AddToClassList(ActionClassName);
                 container.Add(button);
             }
@@ -192,10 +227,9 @@ namespace Spellbound.Core.Controls.Editor {
             return finding.Hint;
         }
 
-        private static Label TextLabel(string text, string className) {
-            var label = new Label(text);
+        private Label TextLabel(string text, string className) {
+            var label = CreateText(text, className);
             label.AddToClassList(className);
-            label.style.whiteSpace = WhiteSpace.Normal;
             return label;
         }
 

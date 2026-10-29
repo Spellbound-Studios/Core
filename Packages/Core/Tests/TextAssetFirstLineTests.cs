@@ -2,6 +2,7 @@
 
 using System.IO;
 using NUnit.Framework;
+using Spellbound.Core.Logging;
 using Spellbound.Core.Operations;
 using UnityEditor;
 using UnityEngine;
@@ -31,8 +32,9 @@ namespace Spellbound.Core.Tests {
             var fullPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", AssetPath));
             var lines = File.ReadAllLines(fullPath);
             Assert.GreaterOrEqual(lines.Length, 3);
-            Debug.Log("TextAssetFirstLineTests: " + Application.unityVersion + " writes '" + lines[0] + "' then '"
-                      + lines[1] + "' then '" + lines[2] + "' as the first lines of a text asset");
+            Log.Emit(LogLevel.Info, "TextAssetFirstLineTests: " + Application.unityVersion + " writes '" + lines[0]
+                                    + "' then '" + lines[1] + "' then '" + lines[2]
+                                    + "' as the first lines of a text asset");
             Assert.IsTrue(lines[0].StartsWith("%YAML"), "first line: " + lines[0]);
 
             for (var index = 0; index < 3; index++) {

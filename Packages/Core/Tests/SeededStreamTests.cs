@@ -2,14 +2,14 @@
 
 using System;
 using NUnit.Framework;
+using Spellbound.Core.Logging;
 using Spellbound.Core.Simulation;
-using UnityEngine;
 
 namespace Spellbound.Core.Tests {
     public class SeededStreamTests {
         [Test]
         public void RawStateMatchesTheReferenceVectors() {
-            var stream = SeededStream.FromState(1, 2, 3, 4);
+            var stream = SeededStream.FromState(0, new SeededStreamState(1, 2, 3, 4));
             Assert.AreEqual(11520UL, stream.NextUnsigned());
             Assert.AreEqual(0UL, stream.NextUnsigned());
             Assert.AreEqual(1509978240UL, stream.NextUnsigned());
@@ -18,7 +18,8 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void AllZeroRawStateThrows() {
-            Assert.Throws<ArgumentException>(() => SeededStream.FromState(0, 0, 0, 0));
+            Assert.Throws<ArgumentException>(() => SeededStream.FromState(7, default));
+            Assert.IsTrue(default(SeededStreamState).IsZero);
         }
 
         [Test]
@@ -68,11 +69,11 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void NextIntStaysInRangeAndHitsEveryValue() {
+        public void NextIntegerStaysInRangeAndHitsEveryValue() {
             var stream = new SeededStream(7);
             var hits = new int[4];
             for (var draw = 0; draw < 10000; draw++) {
-                var value = stream.NextInt(3, 7);
+                var value = stream.NextInteger(3, 7);
                 Assert.IsTrue(value >= 3 && value < 7, value.ToString());
                 hits[value - 3]++;
             }
@@ -83,18 +84,25 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void NextIntCoversTheWholeIntegerRange() {
+        public void NextIntegerCoversTheWholeIntegerRange() {
             var stream = new SeededStream(7);
+            var lowest = int.MaxValue;
+            var highest = int.MinValue;
             for (var draw = 0; draw < 1000; draw++) {
-                stream.NextInt(int.MinValue, int.MaxValue);
+                var value = stream.NextInteger(int.MinValue, int.MaxValue);
+                lowest = Math.Min(lowest, value);
+                highest = Math.Max(highest, value);
             }
+
+            Assert.Less(lowest, int.MinValue / 2);
+            Assert.Greater(highest, int.MaxValue / 2);
         }
 
         [Test]
-        public void NextIntWithMaximumNotAboveMinimumThrows() {
+        public void NextIntegerWithMaximumNotAboveMinimumThrows() {
             var stream = new SeededStream(7);
-            Assert.Throws<ArgumentException>(() => stream.NextInt(5, 5));
-            Assert.Throws<ArgumentException>(() => stream.NextInt(5, 4));
+            Assert.Throws<ArgumentException>(() => stream.NextInteger(5, 5));
+            Assert.Throws<ArgumentException>(() => stream.NextInteger(5, 4));
         }
 
         [Test]
@@ -104,6 +112,40 @@ namespace Spellbound.Core.Tests {
             for (var draw = 0; draw < 1000; draw++) {
                 Assert.AreEqual(first.NextUnsigned(), second.NextUnsigned());
             }
+        }
+
+        [Test]
+        public void AResumedStreamContinuesTheSequence() {
+            var original = new SeededStream(2026);
+            for (var draw = 0; draw < 25; draw++) {
+                original.NextUnsigned();
+            }
+
+            var saved = original.State;
+            var resumed = SeededStream.FromState(original.Seed, saved);
+            Assert.AreEqual(original.Seed, resumed.Seed);
+            Assert.AreEqual(saved, resumed.State);
+
+            for (var draw = 0; draw < 100; draw++) {
+                Assert.AreEqual(original.NextUnsigned(), resumed.NextUnsigned());
+            }
+        }
+
+        [Test]
+        public void AResumedStreamForksLikeTheOriginal() {
+            var original = new SeededStream(2026);
+            original.NextUnsigned();
+            var resumed = SeededStream.FromState(original.Seed, original.State);
+            var resumedWithAnotherSeed = SeededStream.FromState(1, original.State);
+
+            Assert.AreEqual(original.Fork(11).NextUnsigned(), resumed.Fork(11).NextUnsigned());
+            Assert.AreNotEqual(original.Fork(11).NextUnsigned(), resumedWithAnotherSeed.Fork(11).NextUnsigned());
+        }
+
+        [Test]
+        public void TheStateIsNeverAllZero() {
+            Assert.IsFalse(new SeededStream(0).State.IsZero);
+            Assert.IsFalse(new SeededStream(ulong.MaxValue).State.IsZero);
         }
 
         [Test]
@@ -165,7 +207,7 @@ namespace Spellbound.Core.Tests {
             var currentRun = 0;
             var previous = false;
             for (var draw = 0; draw < 100000; draw++) {
-                var value = runStream.NextBool();
+                var value = runStream.NextBoolean();
                 currentRun = draw > 0 && value == previous ? currentRun + 1 : 1;
                 previous = value;
                 longestRun = Math.Max(longestRun, currentRun);
@@ -188,9 +230,9 @@ namespace Spellbound.Core.Tests {
             }
 
             Assert.Less(chiSquare, 310.457);
-            Debug.Log("SeededStreamTests: monobit fraction " + lowestFraction.ToString("F5") + " to "
-                      + highestFraction.ToString("F5") + ", longest run " + longestRun + ", chi-square "
-                      + chiSquare.ToString("F3") + " over 255 degrees of freedom");
+            Log.Emit(LogLevel.Info, "SeededStreamTests: monobit fraction " + lowestFraction.ToString("F5") + " to "
+                                    + highestFraction.ToString("F5") + ", longest run " + longestRun
+                                    + ", chi-square " + chiSquare.ToString("F3") + " over 255 degrees of freedom");
         }
     }
 }

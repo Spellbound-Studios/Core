@@ -12,21 +12,23 @@ namespace Spellbound.Core.Testing {
         private const ulong Prime = 1099511628211UL;
 
         private readonly ulong _state;
+        private readonly bool _begun;
 
         private GoldenHash(ulong state) {
             _state = state;
+            _begun = true;
         }
 
         public static GoldenHash Start() {
             return new GoldenHash(OffsetBasis);
         }
 
-        public ulong Value => _state;
+        public ulong Value => _begun ? _state : OffsetBasis;
 
-        public string Hex => _state.ToString("x16", CultureInfo.InvariantCulture);
+        public string Hexadecimal => Value.ToString("x16", CultureInfo.InvariantCulture);
 
         public GoldenHash Append(ReadOnlySpan<byte> bytes) {
-            var state = _state;
+            var state = Value;
 
             for (var index = 0; index < bytes.Length; index++) {
                 state ^= bytes[index];
@@ -37,7 +39,7 @@ namespace Spellbound.Core.Testing {
         }
 
         public GoldenHash Append(byte value) {
-            return new GoldenHash((_state ^ value) * Prime);
+            return new GoldenHash((Value ^ value) * Prime);
         }
 
         public GoldenHash Append(int value) {
@@ -45,7 +47,7 @@ namespace Spellbound.Core.Testing {
         }
 
         public GoldenHash Append(uint value) {
-            var state = _state;
+            var state = Value;
 
             for (var shift = 0; shift < 32; shift += 8) {
                 state ^= (byte)(value >> shift);
@@ -60,7 +62,7 @@ namespace Spellbound.Core.Testing {
         }
 
         public GoldenHash Append(ulong value) {
-            var state = _state;
+            var state = Value;
 
             for (var shift = 0; shift < 64; shift += 8) {
                 state ^= (byte)(value >> shift);
@@ -79,11 +81,8 @@ namespace Spellbound.Core.Testing {
         }
 
         public GoldenHash Append(string value) {
-            if (string.IsNullOrEmpty(value)) {
-                return this;
-            }
-
-            return Append(new ReadOnlySpan<byte>(Encoding.UTF8.GetBytes(value)));
+            var bytes = string.IsNullOrEmpty(value) ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(value);
+            return Append(bytes.Length).Append(new ReadOnlySpan<byte>(bytes));
         }
 
         public GoldenHash Append<T>(NativeArray<T> values) where T : unmanaged {
@@ -92,7 +91,7 @@ namespace Spellbound.Core.Testing {
             }
 
             var bytes = values.Reinterpret<byte>(UnsafeUtility.SizeOf<T>());
-            var state = _state;
+            var state = Value;
 
             for (var index = 0; index < bytes.Length; index++) {
                 state ^= bytes[index];
@@ -103,7 +102,7 @@ namespace Spellbound.Core.Testing {
         }
 
         public override string ToString() {
-            return Hex;
+            return Hexadecimal;
         }
     }
 }

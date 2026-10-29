@@ -3,11 +3,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Spellbound.Core.Operations.Editor;
+using Spellbound.Core.Tooling;
 using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
-namespace Spellbound.Core.Ledger.Editor {
+namespace Spellbound.Core.UnityLedger {
     public sealed class LedgerCheck {
         public const string ChangelogFileName = "CHANGELOG.md";
         public const string ChangelogIndent = "  ";
@@ -142,7 +144,7 @@ namespace Spellbound.Core.Ledger.Editor {
         }
 
         private static LedgerTypePresence TypePresenceOf(string fullName) {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            var assemblies = new List<Assembly>(AssemblyScanning.ScannableAssemblies());
 
             foreach (var assembly in assemblies) {
                 try {

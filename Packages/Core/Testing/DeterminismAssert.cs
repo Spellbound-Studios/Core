@@ -13,15 +13,15 @@ namespace Spellbound.Core.Testing {
 
             throw new AssertionException("region '" + region + "': golden 0x"
                                          + expected.ToString("x16", CultureInfo.InvariantCulture) + ", actual 0x"
-                                         + actual.Hex);
+                                         + actual.Hexadecimal);
         }
 
-        public static void GoldenHash(string expectedHex, in GoldenHash actual, string region) {
-            GoldenHash(ParseHex(expectedHex), actual, region);
+        public static void GoldenHash(string expectedHexadecimal, in GoldenHash actual, string region) {
+            GoldenHash(ParseHexadecimal(expectedHexadecimal), actual, region);
         }
 
-        private static ulong ParseHex(string hex) {
-            var digits = hex == null ? string.Empty : hex.Trim();
+        private static ulong ParseHexadecimal(string hexadecimal) {
+            var digits = hexadecimal == null ? string.Empty : hexadecimal.Trim();
 
             if (digits.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) {
                 digits = digits.Substring(2);
@@ -29,7 +29,8 @@ namespace Spellbound.Core.Testing {
 
             if (!ulong.TryParse(digits, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture,
                     out var value)) {
-                throw new ArgumentException("'" + hex + "' is not a 64-bit hexadecimal hash.", nameof(hex));
+                throw new ArgumentException("'" + hexadecimal + "' is not a 64-bit hexadecimal hash.",
+                    nameof(hexadecimal));
             }
 
             return value;

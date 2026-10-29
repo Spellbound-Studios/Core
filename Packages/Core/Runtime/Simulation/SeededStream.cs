@@ -4,12 +4,10 @@ using System;
 using System.Globalization;
 
 namespace Spellbound.Core.Simulation {
-    public struct SeededStream {
+    public sealed class SeededStream {
         public const int Algorithm = 1;
 
         private const ulong GoldenGamma = 0x9E3779B97F4A7C15UL;
-
-        public readonly ulong Seed;
 
         private ulong _state0;
         private ulong _state1;
@@ -33,20 +31,24 @@ namespace Spellbound.Core.Simulation {
             }
         }
 
-        private SeededStream(ulong seed, ulong state0, ulong state1, ulong state2, ulong state3) {
+        private SeededStream(ulong seed, in SeededStreamState state) {
             Seed = seed;
-            _state0 = state0;
-            _state1 = state1;
-            _state2 = state2;
-            _state3 = state3;
+            _state0 = state.FirstWord;
+            _state1 = state.SecondWord;
+            _state2 = state.ThirdWord;
+            _state3 = state.FourthWord;
         }
 
-        public static SeededStream FromState(ulong state0, ulong state1, ulong state2, ulong state3) {
-            if (state0 == 0 && state1 == 0 && state2 == 0 && state3 == 0) {
-                throw new ArgumentException("A stream state needs at least one nonzero word.");
+        public ulong Seed { get; }
+
+        public SeededStreamState State => new SeededStreamState(_state0, _state1, _state2, _state3);
+
+        public static SeededStream FromState(ulong seed, in SeededStreamState state) {
+            if (state.IsZero) {
+                throw new ArgumentException("A stream state needs at least one nonzero word.", nameof(state));
             }
 
-            return new SeededStream(0, state0, state1, state2, state3);
+            return new SeededStream(seed, state);
         }
 
         public ulong NextUnsigned() {
@@ -69,7 +71,7 @@ namespace Spellbound.Core.Simulation {
             return (NextUnsigned() >> 40) * (1.0f / (1 << 24));
         }
 
-        public int NextInt(int minimum, int maximum) {
+        public int NextInteger(int minimum, int maximum) {
             if (maximum <= minimum) {
                 throw new ArgumentException("The maximum " + maximum + " must be greater than the minimum "
                                             + minimum + ".", nameof(maximum));
@@ -86,7 +88,7 @@ namespace Spellbound.Core.Simulation {
             return (int)(minimum + (long)(draw % range));
         }
 
-        public bool NextBool() {
+        public bool NextBoolean() {
             return (NextUnsigned() >> 63) != 0;
         }
 

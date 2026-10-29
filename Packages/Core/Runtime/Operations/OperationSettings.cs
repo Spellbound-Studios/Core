@@ -17,6 +17,7 @@ namespace Spellbound.Core.Operations {
         public int maximumHistoryEntries = 1000;
         public string draftsFolder = DefaultDraftsFolder;
         public string ledgerFolder = DefaultLedgerFolder;
+        public int stillnessDelayMilliseconds = 400;
 
         public static OperationSettings Load() {
             var loaded = Resources.Load<OperationSettings>(ResourceName);

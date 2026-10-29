@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Spellbound.Core.Ledger {
+namespace Spellbound.Core.UnityLedger {
     public sealed class LedgerRow {
         public string Id { get; }
         public string Ours { get; }

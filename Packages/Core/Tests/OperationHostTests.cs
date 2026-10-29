@@ -384,7 +384,7 @@ namespace Spellbound.Core.Tests {
             }
 
             var perCall = watch.Elapsed.TotalMilliseconds / Calls;
-            Debug.Log("OperationHost call cost: " + perCall.ToString("F4") + " ms per 'fixture add 1 2' over " + Calls + " calls");
+            Log.Emit(LogLevel.Info, "OperationHost call cost: " + perCall.ToString("F4") + " ms per 'fixture add 1 2' over " + Calls + " calls");
             Assert.Less(perCall, 5.0);
         }
 

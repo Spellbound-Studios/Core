@@ -28,7 +28,7 @@ namespace Spellbound.Core.Tests {
             var output = new RecordingOutput();
             GameConsoleSink.Output = output;
 
-            new GameConsoleSink().Emit(LogLevel.Info, "Source", "hello", "Member", 7);
+            new GameConsoleSink().Emit(LogLevel.Info, "Source", "hello", "Member", 7, null);
 
             Assert.AreEqual(new[] { "[Source.Member:7] hello" }, output.Lines);
             Assert.IsEmpty(output.Errors);
@@ -39,7 +39,7 @@ namespace Spellbound.Core.Tests {
             var output = new RecordingOutput();
             GameConsoleSink.Output = output;
 
-            new GameConsoleSink().Emit(LogLevel.Error, "Source", "boom", "Member", 3);
+            new GameConsoleSink().Emit(LogLevel.Error, "Source", "boom", "Member", 3, null);
 
             Assert.AreEqual(new[] { "[Source.Member:3] boom" }, output.Errors);
             Assert.IsEmpty(output.Lines);
@@ -49,7 +49,7 @@ namespace Spellbound.Core.Tests {
         public void Emit_WithoutOutput_DoesNothing() {
             GameConsoleSink.Output = null;
 
-            Assert.DoesNotThrow(() => new GameConsoleSink().Emit(LogLevel.Error, "Source", "boom", "Member", 1));
+            Assert.DoesNotThrow(() => new GameConsoleSink().Emit(LogLevel.Error, "Source", "boom", "Member", 1, null));
         }
     }
 }

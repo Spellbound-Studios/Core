@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Spellbound.Core.Operations;
+using Spellbound.Core.UnityLedger;
 
 namespace Spellbound.Core.Operations.Editor {
     public static class CoreEditorOperations {
@@ -88,7 +89,7 @@ namespace Spellbound.Core.Operations.Editor {
                     continue;
                 }
 
-                var rows = AgentContextFile.LedgerRows(text);
+                var rows = LedgerSources.RowsIn(text);
 
                 if (rows == null) {
                     table.AddRow(installed.Name, "no " + AgentContextFile.LedgerHeading + " heading");
