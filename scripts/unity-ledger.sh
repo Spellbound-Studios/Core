@@ -68,6 +68,7 @@ if ! editor_answers; then
 
         if [ "$waited" -ge 600 ]; then
             echo "the editor did not answer within 600 s; read $log"
+            unity close "$native_project" --force >/dev/null 2>&1 || true
             exit 12
         fi
     done

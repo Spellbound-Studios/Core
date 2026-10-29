@@ -2,7 +2,7 @@
 
 using System;
 
-namespace Spellbound.Core.Ledger {
+namespace Spellbound.Core.UnityLedger {
     public readonly struct LedgerJudgement {
         private static readonly char[] Whitespace = { ' ', '\t' };
 

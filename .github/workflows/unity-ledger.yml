@@ -12,6 +12,7 @@ on:
       - Packages/packages-lock.json
       - Assets/_Project/Ledger/**
       - Packages/*/AGENTS.md
+      - Packages/Core/**/*.cs
   pull_request:
     paths:
       - ProjectSettings/ProjectVersion.txt
@@ -19,6 +20,7 @@ on:
       - Packages/packages-lock.json
       - Assets/_Project/Ledger/**
       - Packages/*/AGENTS.md
+      - Packages/Core/**/*.cs
 permissions:
   contents: read
 jobs:

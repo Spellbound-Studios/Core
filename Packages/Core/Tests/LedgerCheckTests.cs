@@ -2,8 +2,7 @@
 
 using System.Collections.Generic;
 using NUnit.Framework;
-using Spellbound.Core.Ledger;
-using Spellbound.Core.Ledger.Editor;
+using Spellbound.Core.UnityLedger;
 
 namespace Spellbound.Core.Tests {
     public class LedgerCheckTests {

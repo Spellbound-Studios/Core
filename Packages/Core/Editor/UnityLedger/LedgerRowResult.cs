@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Spellbound.Core.Ledger.Editor {
+namespace Spellbound.Core.UnityLedger {
     public sealed class LedgerRowResult {
         public LedgerRow Row { get; }
         public bool IsStale { get; }

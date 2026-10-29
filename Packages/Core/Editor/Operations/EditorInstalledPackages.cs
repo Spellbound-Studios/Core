@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using Spellbound.Core.Operations;
+using Spellbound.Core.Tooling;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
@@ -44,7 +45,7 @@ namespace Spellbound.Core.Operations.Editor {
         }
 
         public static InstalledPackageDescription ForAssemblyName(string assemblyName) {
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+            foreach (var assembly in AssemblyScanning.ScannableAssemblies()) {
                 if (string.Equals(assembly.GetName().Name, assemblyName, StringComparison.Ordinal)) {
                     return ForAssembly(assembly);
                 }
