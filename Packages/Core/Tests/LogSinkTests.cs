@@ -6,6 +6,18 @@ using Spellbound.Core.Logging;
 
 namespace Spellbound.Core.Tests {
     public class LogSinkTests {
+        private Log.SinkSuspension _suspension;
+
+        [SetUp]
+        public void SetUp() {
+            _suspension = Log.SuspendSinks();
+        }
+
+        [TearDown]
+        public void TearDown() {
+            _suspension.Dispose();
+        }
+
         private static RecordingLogSink NewSink() => new RecordingLogSink(LogLevel.Verbose);
 
         private static void Emit(LogLevel level, string message) =>
@@ -150,13 +162,16 @@ namespace Spellbound.Core.Tests {
         [Test]
         public void ClearSinksRemovesEveryRegistration() {
             var sink = NewSink();
-            Log.AddSink(sink, null, LogLevel.Verbose);
 
-            Log.ClearSinks();
-            Emit(LogLevel.Error, "boom");
+            using (Log.SuspendSinks()) {
+                Log.AddSink(sink, null, LogLevel.Verbose);
 
-            Assert.AreEqual(0, sink.Count);
-            Assert.IsFalse(Log.RemoveSink(sink));
+                Log.ClearSinks();
+                Emit(LogLevel.Error, "boom");
+
+                Assert.AreEqual(0, sink.Count);
+                Assert.IsFalse(Log.RemoveSink(sink));
+            }
         }
 
         [Test]

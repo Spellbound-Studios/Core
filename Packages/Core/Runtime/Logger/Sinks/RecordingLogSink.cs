@@ -17,12 +17,13 @@ namespace Spellbound.Core.Logging {
 
         public void Initialize(LogConfig config) { }
 
-        public void Emit(LogLevel level, string source, string message, string member, int line) {
+        public void Emit(LogLevel level, string source, string message, string member, int line,
+            UnityEngine.Object context) {
             if (level < _minimumLevel)
                 return;
 
             lock (_gate)
-                _entries.Add(new RecordedLogEntry(level, source, message, member, line));
+                _entries.Add(new RecordedLogEntry(level, source, message, member, line, context));
         }
 
         public RecordedLogEntry[] Entries {

@@ -10,7 +10,8 @@ namespace Spellbound.Core.Logging {
 
         public void Initialize(LogConfig config) { }
 
-        public void Emit(LogLevel level, string source, string message, string member, int line) {
+        public void Emit(LogLevel level, string source, string message, string member, int line,
+            UnityEngine.Object context) {
             var output = Output;
 
             if (output == null)
