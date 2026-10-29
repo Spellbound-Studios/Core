@@ -176,7 +176,7 @@ namespace Spellbound.Core.Tests {
             var warm = new OperationCatalog();
             var warmGroups = warm.Groups.Count;
             var assemblies = cold.MarkedAssemblies().Count;
-            UnityEngine.Debug.Log("OperationCatalog load: " + assemblies + " marked assemblies, " + groups + " groups, " + operations
+            Log.Emit(LogLevel.Info, "OperationCatalog load: " + assemblies + " marked assemblies, " + groups + " groups, " + operations
                                   + " operations, cold " + cold.LoadMilliseconds.ToString("F3") + " ms, warm "
                                   + warm.LoadMilliseconds.ToString("F3") + " ms");
             Assert.AreEqual(groups, warmGroups);

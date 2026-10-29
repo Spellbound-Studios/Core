@@ -2,6 +2,7 @@
 
 using System.Collections;
 using NUnit.Framework;
+using Spellbound.Core.Logging;
 using Spellbound.Core.Operations;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -20,7 +21,8 @@ namespace Spellbound.Core.PlayModeTests {
             Assert.IsTrue(run.IsDone);
             Assert.AreEqual("succeeded: waited 120", run.Result.Text);
             Assert.Greater(Time.frameCount, startFrame);
-            Debug.Log("OperationRunYieldTests: waited " + (Time.frameCount - startFrame) + " frames for the run to complete");
+            Log.Emit(LogLevel.Info,
+                "OperationRunYieldTests: waited " + (Time.frameCount - startFrame) + " frames for the run to complete");
         }
 
         [UnityTest]
