@@ -21,6 +21,27 @@ namespace Spellbound.Core {
 
         public static class Packing {
             public static string Describe(Type type) => PackedLayoutDescription.Describe(type);
+
+            public static bool TryPack<T>(in T value, Span<byte> destination, out int written) where T : IPacker =>
+                Packer.TryPack(in value, destination, out written);
+
+            public static PooledPackedBytes PackPooled<T>(in T value) where T : IPacker => Packer.PackPooled(in value);
+
+            public static PooledPackedBytes PackPooled<T>(in T value, in PackingLimits limits) where T : IPacker =>
+                Packer.PackPooled(in value, limits);
+
+            public static PooledPackedBytes PackPooled(Packer.PackWriter writer) => Packer.PackPooled(writer);
+
+            public static bool TryUnpack<T>(ReadOnlySpan<byte> bytes, out T value) where T : IPacker, new() =>
+                Packer.TryUnpack(bytes, out value);
+
+            public static bool PackDelta(ReadOnlySpan<byte> baseline, ReadOnlySpan<byte> current,
+                Span<byte> destination, out int written) =>
+                PayloadDelta.Pack(baseline, current, destination, out written);
+
+            public static bool TryUnpackDelta(ReadOnlySpan<byte> baseline, ReadOnlySpan<byte> delta,
+                Span<byte> destination, out int written) =>
+                PayloadDelta.TryUnpack(baseline, delta, destination, out written);
         }
 
         public static class Observations {
