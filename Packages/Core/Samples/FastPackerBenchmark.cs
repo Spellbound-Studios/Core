@@ -2,17 +2,12 @@
 
 using System;
 using System.Diagnostics;
+using Spellbound.Core.Logging;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace Spellbound.Core.Packing {
-    /// <summary>
-    /// FastPackerBenchmark is attached to a bakePrefab in the prefabs folder and simply runs a quick benchmark of the
-    /// available packing methods found in the core system. This script can and should be ignored for any game design
-    /// purposes and exists only as a series of unit tests.
-    /// </summary>
     public sealed class FastPackerBenchmark : MonoBehaviour {
-        private const int Iterations = 1_000_000;
+        [SerializeField] private int iterations = 1_000_000;
 
         private void Start() {
             BenchmarkInts();
@@ -22,186 +17,123 @@ namespace Spellbound.Core.Packing {
         }
 
         private void BenchmarkInts() {
-            var buffer = new byte[4 * Iterations];
+            var buffer = new byte[sizeof(int) * iterations];
             var span = new Span<byte>(buffer);
             var readSpan = new ReadOnlySpan<byte>(buffer);
+            var stopwatch = new Stopwatch();
 
-            var sw = new Stopwatch();
+            stopwatch.Restart();
 
-            // Write ints with FastPacker (BitConverter)
-            sw.Restart();
-            for (var i = 0; i < Iterations; i++) Packer.WriteInt(ref span, i);
-            sw.Stop();
-            Debug.Log($"WriteInt (BitConverter) took: {sw.ElapsedMilliseconds} ms");
-
-            // Read ints with FastPacker (BitConverter)
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var val = Packer.ReadInt(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                Packer.WriteInt(ref span, index);
             }
 
-            sw.Stop();
-            Debug.Log($"ReadInt (BitConverter) took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("WriteInt", stopwatch);
 
-            // Reset spans
-            span = new Span<byte>(buffer);
-            readSpan = new ReadOnlySpan<byte>(buffer);
+            stopwatch.Restart();
+            var sum = 0;
 
-            // Write ints bitwise
-            sw.Restart();
-            for (var i = 0; i < Iterations; i++) Packer.WriteIntBitwise(ref span, i);
-            sw.Stop();
-            Debug.Log($"WriteIntBitwise took: {sw.ElapsedMilliseconds} ms");
-
-            // Read ints bitwise
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var val = Packer.ReadIntBitwise(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                sum += Packer.ReadInt(ref readSpan);
             }
 
-            sw.Stop();
-            Debug.Log($"ReadIntBitwise took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("ReadInt", stopwatch);
+            Keep(sum);
         }
 
         private void BenchmarkFloats() {
-            var buffer = new byte[4 * Iterations];
+            var buffer = new byte[sizeof(float) * iterations];
             var span = new Span<byte>(buffer);
             var readSpan = new ReadOnlySpan<byte>(buffer);
-            var sw = new Stopwatch();
+            var stopwatch = new Stopwatch();
 
-            // Write floats
-            sw.Restart();
-            for (var i = 0; i < Iterations; i++) Packer.WriteFloat(ref span, i * 0.1f);
-            sw.Stop();
-            Debug.Log($"WriteFloat (BitConverter) took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Restart();
 
-            // Read floats
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var val = Packer.ReadFloat(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                Packer.WriteFloat(ref span, index * 0.1f);
             }
 
-            sw.Stop();
-            Debug.Log($"ReadFloat (BitConverter) took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("WriteFloat", stopwatch);
 
-            // Reset spans
-            span = new Span<byte>(buffer);
-            readSpan = new ReadOnlySpan<byte>(buffer);
+            stopwatch.Restart();
+            var sum = 0f;
 
-            // Write floats bitwise
-            sw.Restart();
-            for (var i = 0; i < Iterations; i++) Packer.WriteFloatBitwise(ref span, i * 0.1f);
-            sw.Stop();
-            Debug.Log($"WriteFloatBitwise took: {sw.ElapsedMilliseconds} ms");
-
-            // Read floats bitwise
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var val = Packer.ReadFloatBitwise(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                sum += Packer.ReadFloat(ref readSpan);
             }
 
-            sw.Stop();
-            Debug.Log($"ReadFloatBitwise took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("ReadFloat", stopwatch);
+            Keep(sum);
         }
 
         private void BenchmarkVectors() {
-            var buffer = new byte[12 * Iterations]; // Vector3 = 3 floats
+            var buffer = new byte[sizeof(float) * 3 * iterations];
             var span = new Span<byte>(buffer);
             var readSpan = new ReadOnlySpan<byte>(buffer);
-            var sw = new Stopwatch();
-            var v = new Vector3(1.1f, 2.2f, 3.3f);
+            var stopwatch = new Stopwatch();
+            var vector = new Vector3(1.1f, 2.2f, 3.3f);
 
-            // Write Vector3
-            sw.Restart();
+            stopwatch.Restart();
 
-            for (var i = 0; i < Iterations; i++)
-                Packer.WriteVector3(ref span, v);
-            sw.Stop();
-            Debug.Log($"WriteVector3 took: {sw.ElapsedMilliseconds} ms");
-
-            // Read Vector3
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var _ = Packer.ReadVector3(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                Packer.WriteVector3(ref span, vector);
             }
 
-            sw.Stop();
-            Debug.Log($"ReadVector3 took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("WriteVector3", stopwatch);
 
-            // Reset spans
-            span = new Span<byte>(buffer);
-            readSpan = new ReadOnlySpan<byte>(buffer);
+            stopwatch.Restart();
+            var sum = 0f;
 
-            // Write Vector3 bitwise
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++)
-                Packer.WriteVector3Bitwise(ref span, v);
-            sw.Stop();
-            Debug.Log($"WriteVector3Bitwise took: {sw.ElapsedMilliseconds} ms");
-
-            // Read Vector3 bitwise
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var _ = Packer.ReadVector3Bitwise(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                sum += Packer.ReadVector3(ref readSpan).x;
             }
 
-            sw.Stop();
-            Debug.Log($"ReadVector3Bitwise took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("ReadVector3", stopwatch);
+            Keep(sum);
         }
 
         private void BenchmarkQuaternions() {
-            var buffer = new byte[16 * Iterations]; // Quaternion = 4 floats
+            var buffer = new byte[sizeof(float) * 4 * iterations];
             var span = new Span<byte>(buffer);
             var readSpan = new ReadOnlySpan<byte>(buffer);
-            var sw = new Stopwatch();
-            var q = new Quaternion(1f, 2f, 3f, 4f);
+            var stopwatch = new Stopwatch();
+            var quaternion = new Quaternion(1f, 2f, 3f, 4f);
 
-            // Write Quaternion
-            sw.Restart();
+            stopwatch.Restart();
 
-            for (var i = 0; i < Iterations; i++)
-                Packer.WriteQuaternion(ref span, q);
-            sw.Stop();
-            Debug.Log($"WriteQuaternion took: {sw.ElapsedMilliseconds} ms");
-
-            // Read Quaternion
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var _ = Packer.ReadQuaternion(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                Packer.WriteQuaternion(ref span, quaternion);
             }
 
-            sw.Stop();
-            Debug.Log($"ReadQuaternion took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("WriteQuaternion", stopwatch);
 
-            // Reset spans
-            span = new Span<byte>(buffer);
-            readSpan = new ReadOnlySpan<byte>(buffer);
+            stopwatch.Restart();
+            var sum = 0f;
 
-            // Write Quaternion bitwise
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++)
-                Packer.WriteQuaternionBitwise(ref span, q);
-            sw.Stop();
-            Debug.Log($"WriteQuaternionBitwise took: {sw.ElapsedMilliseconds} ms");
-
-            // Read Quaternion bitwise
-            sw.Restart();
-
-            for (var i = 0; i < Iterations; i++) {
-                var _ = Packer.ReadQuaternionBitwise(ref readSpan);
+            for (var index = 0; index < iterations; index++) {
+                sum += Packer.ReadQuaternion(ref readSpan).w;
             }
 
-            sw.Stop();
-            Debug.Log($"ReadQuaternionBitwise took: {sw.ElapsedMilliseconds} ms");
+            stopwatch.Stop();
+            Report("ReadQuaternion", stopwatch);
+            Keep(sum);
+        }
+
+        private void Report(string name, Stopwatch stopwatch) =>
+            Log.Emit(LogLevel.Info, "FastPackerBenchmark: " + name + " of " + iterations + " took "
+                                    + stopwatch.ElapsedMilliseconds + " ms", this);
+
+        private static float _kept;
+
+        private static void Keep(float value) {
+            _kept += value;
         }
     }
 }

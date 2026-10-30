@@ -9,26 +9,67 @@ using Spellbound.Core.Logging;
 using UnityEngine;
 
 namespace Spellbound.Core.Packing {
-    /// <summary>
-    /// Static binary serialization utility using Span-based APIs.
-    /// Provides both BitConverter and bitwise methods for flexibility.
-    /// Requires IPacker implementers.
-    /// </summary>
     public static class Packer {
         public delegate void PackWriter(ref Span<byte> buffer);
 
-        // Starting stack buffer size
-        private const int StackBufferSize = 4096;
+        private interface IPackStep {
+            void Pack(ref Span<byte> buffer);
+        }
 
-        // Max heap buffer allowed: 64 MB - tune as needed
-        private const int MaxRentedBuffer = 1024 * 1024 * 64;
+        private readonly struct ValueStep<T> : IPackStep where T : IPacker {
+            private readonly T _value;
 
-        private static int _payloadSizeHint = StackBufferSize;
+            public ValueStep(T value) => _value = value;
 
-        private static void RecordPayloadSize(int written) =>
-                _payloadSizeHint = written > StackBufferSize ? written : StackBufferSize;
+            public void Pack(ref Span<byte> buffer) => _value.Pack(ref buffer);
+        }
 
-        #region Byte
+        private readonly struct WriterStep : IPackStep {
+            private readonly PackWriter _writer;
+
+            public WriterStep(PackWriter writer) => _writer = writer;
+
+            public void Pack(ref Span<byte> buffer) => _writer(ref buffer);
+        }
+
+        private readonly struct ArrayStep<T> : IPackStep where T : IPacker {
+            private readonly T[] _items;
+
+            public ArrayStep(T[] items) => _items = items;
+
+            public void Pack(ref Span<byte> buffer) => PackArray(ref buffer, _items);
+        }
+
+        private readonly struct ListStep<T> : IPackStep where T : IPacker {
+            private readonly List<T> _items;
+
+            public ListStep(List<T> items) => _items = items;
+
+            public void Pack(ref Span<byte> buffer) => PackList(ref buffer, _items);
+        }
+
+        private readonly struct SmartStep<T> : IPackStep where T : ISmartPacker {
+            private readonly T _value;
+            private readonly uint _tag;
+
+            public SmartStep(T value, uint tag) {
+                _value = value;
+                _tag = tag;
+            }
+
+            public void Pack(ref Span<byte> buffer) {
+                WriteUInt(ref buffer, _tag);
+                _value.Pack(ref buffer);
+            }
+        }
+
+        private readonly struct SmartListStep<T> : IPackStep where T : ISmartPacker {
+            private readonly IReadOnlyList<T> _items;
+
+            public SmartListStep(IReadOnlyList<T> items) => _items = items;
+
+            public void Pack(ref Span<byte> buffer) => WriteSmartList(ref buffer, _items);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteByte(ref Span<byte> buffer, byte value) {
@@ -40,13 +81,19 @@ namespace Spellbound.Core.Packing {
         public static byte ReadByte(ref ReadOnlySpan<byte> buffer) {
             var value = buffer[0];
             buffer = buffer[1..];
-
             return value;
         }
 
-        #endregion
-        
-        #region SByte
+        public static bool TryReadByte(ref ReadOnlySpan<byte> buffer, out byte value) {
+            if (buffer.Length < 1) {
+                value = 0;
+                return false;
+            }
+
+            value = buffer[0];
+            buffer = buffer[1..];
+            return true;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteSByte(ref Span<byte> buffer, sbyte value) {
@@ -58,13 +105,19 @@ namespace Spellbound.Core.Packing {
         public static sbyte ReadSByte(ref ReadOnlySpan<byte> buffer) {
             var value = unchecked((sbyte)buffer[0]);
             buffer = buffer[1..];
-
             return value;
         }
 
-        #endregion SByte
+        public static bool TryReadSByte(ref ReadOnlySpan<byte> buffer, out sbyte value) {
+            if (buffer.Length < 1) {
+                value = 0;
+                return false;
+            }
 
-        #region Bool
+            value = unchecked((sbyte)buffer[0]);
+            buffer = buffer[1..];
+            return true;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteBool(ref Span<byte> buffer, bool value) {
@@ -76,281 +129,288 @@ namespace Spellbound.Core.Packing {
         public static bool ReadBool(ref ReadOnlySpan<byte> buffer) {
             var value = buffer[0] != 0;
             buffer = buffer[1..];
-
             return value;
         }
 
-        #endregion
+        public static bool TryReadBool(ref ReadOnlySpan<byte> buffer, out bool value) {
+            if (buffer.Length < 1) {
+                value = false;
+                return false;
+            }
 
-        #region Int
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteInt(ref Span<byte> buffer, int value) {
-            BitConverter.TryWriteBytes(buffer, value);
-            buffer = buffer[sizeof(int)..];
+            value = buffer[0] != 0;
+            buffer = buffer[1..];
+            return true;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ReadInt(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToInt32(buffer);
-            buffer = buffer[sizeof(int)..];
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteIntBitwise(ref Span<byte> buffer, int value) {
-            buffer[0] = (byte)value;
-            buffer[1] = (byte)(value >> 8);
-            buffer[2] = (byte)(value >> 16);
-            buffer[3] = (byte)(value >> 24);
-            buffer = buffer[4..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int ReadIntBitwise(ref ReadOnlySpan<byte> buffer) {
-            var value = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
-            buffer = buffer[4..];
-
-            return value;
-        }
-
-        #endregion
-
-        #region Floats
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFloat(ref Span<byte> buffer, float value) {
-            BitConverter.TryWriteBytes(buffer, value);
-            buffer = buffer[sizeof(float)..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ReadFloat(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToSingle(buffer);
-            buffer = buffer[sizeof(float)..];
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteFloatBitwise(ref Span<byte> buffer, float value) {
-            var intVal = BitConverter.SingleToInt32Bits(value);
-            WriteIntBitwise(ref buffer, intVal);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ReadFloatBitwise(ref ReadOnlySpan<byte> buffer) {
-            var intVal = ReadIntBitwise(ref buffer);
-
-            return BitConverter.Int32BitsToSingle(intVal);
-        }
-
-        #endregion
-
-        #region UInt
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUInt(ref Span<byte> buffer, uint value) {
-            BitConverter.TryWriteBytes(buffer, value);
-            buffer = buffer[sizeof(uint)..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ReadUInt(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToUInt32(buffer);
-            buffer = buffer[sizeof(uint)..];
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUIntBitwise(ref Span<byte> buffer, uint value) {
-            buffer[0] = (byte)value;
-            buffer[1] = (byte)(value >> 8);
-            buffer[2] = (byte)(value >> 16);
-            buffer[3] = (byte)(value >> 24);
-            buffer = buffer[4..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ReadUIntBitwise(ref ReadOnlySpan<byte> buffer) {
-            var value = buffer[0]
-                        | ((uint)buffer[1] << 8)
-                        | ((uint)buffer[2] << 16)
-                        | ((uint)buffer[3] << 24);
-            buffer = buffer[4..];
-
-            return value;
-        }
-
-        #endregion
-
-        #region ULong
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteULong(ref Span<byte> buffer, ulong value) {
-            BitConverter.TryWriteBytes(buffer, value);
-            buffer = buffer[sizeof(ulong)..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong ReadULong(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToUInt64(buffer);
-            buffer = buffer[sizeof(ulong)..];
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteULongBitwise(ref Span<byte> buffer, ulong value) {
-            buffer[0] = (byte)value;
-            buffer[1] = (byte)(value >> 8);
-            buffer[2] = (byte)(value >> 16);
-            buffer[3] = (byte)(value >> 24);
-            buffer[4] = (byte)(value >> 32);
-            buffer[5] = (byte)(value >> 40);
-            buffer[6] = (byte)(value >> 48);
-            buffer[7] = (byte)(value >> 56);
-            buffer = buffer[8..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong ReadULongBitwise(ref ReadOnlySpan<byte> buffer) {
-            var value = buffer[0]
-                        | ((ulong)buffer[1] << 8)
-                        | ((ulong)buffer[2] << 16)
-                        | ((ulong)buffer[3] << 24)
-                        | ((ulong)buffer[4] << 32)
-                        | ((ulong)buffer[5] << 40)
-                        | ((ulong)buffer[6] << 48)
-                        | ((ulong)buffer[7] << 56);
-            buffer = buffer[8..];
-
-            return value;
-        }
-
-        #endregion
-
-        #region Long
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteLong(ref Span<byte> buffer, long value) {
-            BitConverter.TryWriteBytes(buffer, value);
-            buffer = buffer[sizeof(long)..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long ReadLong(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToInt64(buffer);
-            buffer = buffer[sizeof(long)..];
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteLongBitwise(ref Span<byte> buffer, long value) {
-            buffer[0] = (byte)value;
-            buffer[1] = (byte)(value >> 8);
-            buffer[2] = (byte)(value >> 16);
-            buffer[3] = (byte)(value >> 24);
-            buffer[4] = (byte)(value >> 32);
-            buffer[5] = (byte)(value >> 40);
-            buffer[6] = (byte)(value >> 48);
-            buffer[7] = (byte)(value >> 56);
-            buffer = buffer[8..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static long ReadLongBitwise(ref ReadOnlySpan<byte> buffer) {
-            var value = buffer[0]
-                        | ((long)buffer[1] << 8)
-                        | ((long)buffer[2] << 16)
-                        | ((long)buffer[3] << 24)
-                        | ((long)buffer[4] << 32)
-                        | ((long)buffer[5] << 40)
-                        | ((long)buffer[6] << 48)
-                        | ((long)buffer[7] << 56);
-            buffer = buffer[8..];
-
-            return value;
-        }
-
-        #endregion
-
-        #region Short
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteShort(ref Span<byte> buffer, short value) {
-            BitConverter.TryWriteBytes(buffer, value);
+            buffer[1] = (byte)(value >> 8);
+            buffer[0] = (byte)value;
             buffer = buffer[sizeof(short)..];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static short ReadShort(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToInt16(buffer);
+            var value = (short)(buffer[0] | (buffer[1] << 8));
             buffer = buffer[sizeof(short)..];
-
             return value;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteShortBitwise(ref Span<byte> buffer, short value) {
-            buffer[0] = (byte)value;
-            buffer[1] = (byte)(value >> 8);
-            buffer = buffer[2..];
+        public static bool TryReadShort(ref ReadOnlySpan<byte> buffer, out short value) {
+            if (buffer.Length < sizeof(short)) {
+                value = 0;
+                return false;
+            }
+
+            value = ReadShort(ref buffer);
+            return true;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static short ReadShortBitwise(ref ReadOnlySpan<byte> buffer) {
-            var value = (short)(buffer[0]
-                                | (buffer[1] << 8));
-            buffer = buffer[2..];
-
-            return value;
-        }
-
-        #endregion
-        
-        #region UShort
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteUShort(ref Span<byte> buffer, ushort value) {
-            BitConverter.TryWriteBytes(buffer, value);
+            buffer[1] = (byte)(value >> 8);
+            buffer[0] = (byte)value;
             buffer = buffer[sizeof(ushort)..];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ushort ReadUShort(ref ReadOnlySpan<byte> buffer) {
-            var value = BitConverter.ToUInt16(buffer);
-            buffer = buffer[sizeof(ushort)..];
-
-            return value;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteUShortBitwise(ref Span<byte> buffer, ushort value) {
-            buffer[0] = (byte)value;
-            buffer[1] = (byte)(value >> 8);
-            buffer = buffer[2..];
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ushort ReadUShortBitwise(ref ReadOnlySpan<byte> buffer) {
             var value = (ushort)(buffer[0] | (buffer[1] << 8));
-            buffer = buffer[2..];
-
+            buffer = buffer[sizeof(ushort)..];
             return value;
         }
 
-        #endregion
+        public static bool TryReadUShort(ref ReadOnlySpan<byte> buffer, out ushort value) {
+            if (buffer.Length < sizeof(ushort)) {
+                value = 0;
+                return false;
+            }
 
-        #region Strings
+            value = ReadUShort(ref buffer);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteInt(ref Span<byte> buffer, int value) {
+            buffer[3] = (byte)(value >> 24);
+            buffer[2] = (byte)(value >> 16);
+            buffer[1] = (byte)(value >> 8);
+            buffer[0] = (byte)value;
+            buffer = buffer[sizeof(int)..];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ReadInt(ref ReadOnlySpan<byte> buffer) {
+            var value = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
+            buffer = buffer[sizeof(int)..];
+            return value;
+        }
+
+        public static bool TryReadInt(ref ReadOnlySpan<byte> buffer, out int value) {
+            if (buffer.Length < sizeof(int)) {
+                value = 0;
+                return false;
+            }
+
+            value = ReadInt(ref buffer);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteUInt(ref Span<byte> buffer, uint value) {
+            buffer[3] = (byte)(value >> 24);
+            buffer[2] = (byte)(value >> 16);
+            buffer[1] = (byte)(value >> 8);
+            buffer[0] = (byte)value;
+            buffer = buffer[sizeof(uint)..];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ReadUInt(ref ReadOnlySpan<byte> buffer) {
+            var value = buffer[0] | ((uint)buffer[1] << 8) | ((uint)buffer[2] << 16) | ((uint)buffer[3] << 24);
+            buffer = buffer[sizeof(uint)..];
+            return value;
+        }
+
+        public static bool TryReadUInt(ref ReadOnlySpan<byte> buffer, out uint value) {
+            if (buffer.Length < sizeof(uint)) {
+                value = 0;
+                return false;
+            }
+
+            value = ReadUInt(ref buffer);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteLong(ref Span<byte> buffer, long value) {
+            buffer[7] = (byte)(value >> 56);
+            buffer[6] = (byte)(value >> 48);
+            buffer[5] = (byte)(value >> 40);
+            buffer[4] = (byte)(value >> 32);
+            buffer[3] = (byte)(value >> 24);
+            buffer[2] = (byte)(value >> 16);
+            buffer[1] = (byte)(value >> 8);
+            buffer[0] = (byte)value;
+            buffer = buffer[sizeof(long)..];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long ReadLong(ref ReadOnlySpan<byte> buffer) {
+            var value = buffer[0] | ((long)buffer[1] << 8) | ((long)buffer[2] << 16) | ((long)buffer[3] << 24)
+                        | ((long)buffer[4] << 32) | ((long)buffer[5] << 40) | ((long)buffer[6] << 48)
+                        | ((long)buffer[7] << 56);
+            buffer = buffer[sizeof(long)..];
+            return value;
+        }
+
+        public static bool TryReadLong(ref ReadOnlySpan<byte> buffer, out long value) {
+            if (buffer.Length < sizeof(long)) {
+                value = 0;
+                return false;
+            }
+
+            value = ReadLong(ref buffer);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteULong(ref Span<byte> buffer, ulong value) {
+            buffer[7] = (byte)(value >> 56);
+            buffer[6] = (byte)(value >> 48);
+            buffer[5] = (byte)(value >> 40);
+            buffer[4] = (byte)(value >> 32);
+            buffer[3] = (byte)(value >> 24);
+            buffer[2] = (byte)(value >> 16);
+            buffer[1] = (byte)(value >> 8);
+            buffer[0] = (byte)value;
+            buffer = buffer[sizeof(ulong)..];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ReadULong(ref ReadOnlySpan<byte> buffer) {
+            var value = buffer[0] | ((ulong)buffer[1] << 8) | ((ulong)buffer[2] << 16) | ((ulong)buffer[3] << 24)
+                        | ((ulong)buffer[4] << 32) | ((ulong)buffer[5] << 40) | ((ulong)buffer[6] << 48)
+                        | ((ulong)buffer[7] << 56);
+            buffer = buffer[sizeof(ulong)..];
+            return value;
+        }
+
+        public static bool TryReadULong(ref ReadOnlySpan<byte> buffer, out ulong value) {
+            if (buffer.Length < sizeof(ulong)) {
+                value = 0;
+                return false;
+            }
+
+            value = ReadULong(ref buffer);
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WriteFloat(ref Span<byte> buffer, float value) =>
+            WriteInt(ref buffer, BitConverter.SingleToInt32Bits(value));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float ReadFloat(ref ReadOnlySpan<byte> buffer) =>
+            BitConverter.Int32BitsToSingle(ReadInt(ref buffer));
+
+        public static bool TryReadFloat(ref ReadOnlySpan<byte> buffer, out float value) {
+            if (buffer.Length < sizeof(float)) {
+                value = 0f;
+                return false;
+            }
+
+            value = ReadFloat(ref buffer);
+            return true;
+        }
+
+        public static void WriteVarUInt(ref Span<byte> buffer, uint value) {
+            if (!VarIntCodec.TryWrite(buffer, value, out var written)) {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "The buffer has no room for the varint.");
+            }
+
+            buffer = buffer[written..];
+        }
+
+        public static uint ReadVarUInt(ref ReadOnlySpan<byte> buffer) {
+            if (!VarIntCodec.TryRead(buffer, out uint value, out var read)) {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "The buffer holds no complete varint.");
+            }
+
+            buffer = buffer[read..];
+            return value;
+        }
+
+        public static bool TryReadVarUInt(ref ReadOnlySpan<byte> buffer, out uint value) {
+            if (!VarIntCodec.TryRead(buffer, out value, out var read)) {
+                return false;
+            }
+
+            buffer = buffer[read..];
+            return true;
+        }
+
+        public static void WriteVarInt(ref Span<byte> buffer, int value) =>
+            WriteVarUInt(ref buffer, VarIntCodec.ZigZag(value));
+
+        public static int ReadVarInt(ref ReadOnlySpan<byte> buffer) => VarIntCodec.UnZigZag(ReadVarUInt(ref buffer));
+
+        public static bool TryReadVarInt(ref ReadOnlySpan<byte> buffer, out int value) {
+            var read = TryReadVarUInt(ref buffer, out var raw);
+            value = read ? VarIntCodec.UnZigZag(raw) : 0;
+            return read;
+        }
+
+        public static void WriteVarULong(ref Span<byte> buffer, ulong value) {
+            if (!VarIntCodec.TryWrite(buffer, value, out var written)) {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "The buffer has no room for the varint.");
+            }
+
+            buffer = buffer[written..];
+        }
+
+        public static ulong ReadVarULong(ref ReadOnlySpan<byte> buffer) {
+            if (!VarIntCodec.TryRead(buffer, out ulong value, out var read)) {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "The buffer holds no complete varint.");
+            }
+
+            buffer = buffer[read..];
+            return value;
+        }
+
+        public static bool TryReadVarULong(ref ReadOnlySpan<byte> buffer, out ulong value) {
+            if (!VarIntCodec.TryRead(buffer, out value, out var read)) {
+                return false;
+            }
+
+            buffer = buffer[read..];
+            return true;
+        }
+
+        public static void WriteVarLong(ref Span<byte> buffer, long value) =>
+            WriteVarULong(ref buffer, VarIntCodec.ZigZag(value));
+
+        public static long ReadVarLong(ref ReadOnlySpan<byte> buffer) =>
+            VarIntCodec.UnZigZag(ReadVarULong(ref buffer));
+
+        public static bool TryReadVarLong(ref ReadOnlySpan<byte> buffer, out long value) {
+            var read = TryReadVarULong(ref buffer, out var raw);
+            value = read ? VarIntCodec.UnZigZag(raw) : 0;
+            return read;
+        }
+
+        public static int VarIntBytesOf(uint value) => VarIntCodec.BytesOf(value);
+
+        public static int VarIntBytesOf(ulong value) => VarIntCodec.BytesOf(value);
+
+        public static int VarIntBytesOf(int value) => VarIntCodec.BytesOf(VarIntCodec.ZigZag(value));
+
+        public static int VarIntBytesOf(long value) => VarIntCodec.BytesOf(VarIntCodec.ZigZag(value));
 
         public static void WriteString(ref Span<byte> buffer, string value) {
             if (string.IsNullOrEmpty(value)) {
                 WriteInt(ref buffer, 0);
-
                 return;
             }
 
@@ -361,16 +421,28 @@ namespace Spellbound.Core.Packing {
         }
 
         public static string ReadString(ref ReadOnlySpan<byte> buffer) {
-            var len = ReadInt(ref buffer);
-            var value = Encoding.UTF8.GetString(buffer[..len]);
-            buffer = buffer[len..];
-
+            var length = ReadInt(ref buffer);
+            var value = Encoding.UTF8.GetString(buffer[..length]);
+            buffer = buffer[length..];
             return value;
         }
 
-        #endregion
+        public static bool TryReadString(ref ReadOnlySpan<byte> buffer, int maximumBytes, out string value) {
+            value = null;
+            var remaining = buffer;
 
-        #region Vector3
+            if (!TryReadInt(ref remaining, out var length) || length < 0 || length > maximumBytes
+                || length > remaining.Length) {
+                return false;
+            }
+
+            value = length == 0 ? string.Empty : Encoding.UTF8.GetString(remaining[..length]);
+            buffer = remaining[length..];
+            return true;
+        }
+
+        public static bool TryReadString(ref ReadOnlySpan<byte> buffer, in DecodeLimits limits, out string value) =>
+            TryReadString(ref buffer, limits.MaximumStringBytes, out value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVector3(ref Span<byte> buffer, in Vector3 v) {
@@ -384,29 +456,18 @@ namespace Spellbound.Core.Packing {
             var x = ReadFloat(ref buffer);
             var y = ReadFloat(ref buffer);
             var z = ReadFloat(ref buffer);
-
             return new Vector3(x, y, z);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteVector3Bitwise(ref Span<byte> buffer, in Vector3 v) {
-            WriteFloatBitwise(ref buffer, v.x);
-            WriteFloatBitwise(ref buffer, v.y);
-            WriteFloatBitwise(ref buffer, v.z);
+        public static bool TryReadVector3(ref ReadOnlySpan<byte> buffer, out Vector3 value) {
+            if (buffer.Length < sizeof(float) * 3) {
+                value = default;
+                return false;
+            }
+
+            value = ReadVector3(ref buffer);
+            return true;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 ReadVector3Bitwise(ref ReadOnlySpan<byte> buffer) {
-            var x = ReadFloatBitwise(ref buffer);
-            var y = ReadFloatBitwise(ref buffer);
-            var z = ReadFloatBitwise(ref buffer);
-
-            return new Vector3(x, y, z);
-        }
-
-        #endregion
-
-        #region Vector2
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteVector2(ref Span<byte> buffer, in Vector2 v) {
@@ -418,27 +479,18 @@ namespace Spellbound.Core.Packing {
         public static Vector2 ReadVector2(ref ReadOnlySpan<byte> buffer) {
             var x = ReadFloat(ref buffer);
             var y = ReadFloat(ref buffer);
-
             return new Vector2(x, y);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteVector2Bitwise(ref Span<byte> buffer, in Vector2 v) {
-            WriteFloatBitwise(ref buffer, v.x);
-            WriteFloatBitwise(ref buffer, v.y);
+        public static bool TryReadVector2(ref ReadOnlySpan<byte> buffer, out Vector2 value) {
+            if (buffer.Length < sizeof(float) * 2) {
+                value = default;
+                return false;
+            }
+
+            value = ReadVector2(ref buffer);
+            return true;
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2 ReadVector2Bitwise(ref ReadOnlySpan<byte> buffer) {
-            var x = ReadFloatBitwise(ref buffer);
-            var y = ReadFloatBitwise(ref buffer);
-
-            return new Vector2(x, y);
-        }
-
-        #endregion
-
-        #region Quaternion
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteQuaternion(ref Span<byte> buffer, in Quaternion q) {
@@ -454,138 +506,161 @@ namespace Spellbound.Core.Packing {
             var y = ReadFloat(ref buffer);
             var z = ReadFloat(ref buffer);
             var w = ReadFloat(ref buffer);
-
             return new Quaternion(x, y, z, w);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteQuaternionBitwise(ref Span<byte> buffer, in Quaternion q) {
-            WriteFloatBitwise(ref buffer, q.x);
-            WriteFloatBitwise(ref buffer, q.y);
-            WriteFloatBitwise(ref buffer, q.z);
-            WriteFloatBitwise(ref buffer, q.w);
+        public static bool TryReadQuaternion(ref ReadOnlySpan<byte> buffer, out Quaternion value) {
+            if (buffer.Length < sizeof(float) * 4) {
+                value = default;
+                return false;
+            }
+
+            value = ReadQuaternion(ref buffer);
+            return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Quaternion ReadQuaternionBitwise(ref ReadOnlySpan<byte> buffer) {
-            var x = ReadFloatBitwise(ref buffer);
-            var y = ReadFloatBitwise(ref buffer);
-            var z = ReadFloatBitwise(ref buffer);
-            var w = ReadFloatBitwise(ref buffer);
-
-            return new Quaternion(x, y, z, w);
-        }
-
-        #endregion
-
-        #region Byte Arrays
-
-        /// <summary>
-        /// Write a byte array with a length prefix (null treated as empty)
-        /// </summary>
         public static void WriteBytes(ref Span<byte> buffer, byte[] data) {
-            var len = data?.Length ?? 0;
-            WriteInt(ref buffer, len);
+            var length = data?.Length ?? 0;
+            WriteInt(ref buffer, length);
 
-            if (len <= 0)
+            if (length <= 0) {
                 return;
+            }
 
             data.AsSpan().CopyTo(buffer);
-            buffer = buffer[len..];
+            buffer = buffer[length..];
         }
 
-        /// <summary>
-        /// Write a ReadOnlySpan with a length prefix
-        /// </summary>
         public static void WriteBytes(ref Span<byte> buffer, ReadOnlySpan<byte> data) {
             WriteInt(ref buffer, data.Length);
             data.CopyTo(buffer);
             buffer = buffer[data.Length..];
         }
 
-        /// <summary>
-        /// Read a length-prefixed byte array that never returns null and returns an empty array instead.
-        /// </summary>
         public static byte[] ReadBytes(ref ReadOnlySpan<byte> buffer) {
-            var len = ReadInt(ref buffer);
+            var length = ReadInt(ref buffer);
 
-            if (len == 0)
+            if (length == 0) {
                 return Array.Empty<byte>();
+            }
 
-            var result = buffer[..len].ToArray();
-            buffer = buffer[len..];
-
+            var result = buffer[..length].ToArray();
+            buffer = buffer[length..];
             return result;
         }
 
-        #endregion
+        public static bool TryReadBytes(ref ReadOnlySpan<byte> buffer, int maximumBytes, out byte[] value) {
+            value = null;
+            var remaining = buffer;
 
-        #region Array Packing
+            if (!TryReadInt(ref remaining, out var length) || length < 0 || length > maximumBytes
+                || length > remaining.Length) {
+                return false;
+            }
 
-        /// <summary>
-        /// Pack an array of IPacker items with a length prefix with a null treated as empty.
-        /// </summary>
+            value = length == 0 ? Array.Empty<byte>() : remaining[..length].ToArray();
+            buffer = remaining[length..];
+            return true;
+        }
+
+        public static bool TryReadBytes(ref ReadOnlySpan<byte> buffer, in DecodeLimits limits, out byte[] value) =>
+            TryReadBytes(ref buffer, limits.MaximumByteRun, out value);
+
         public static void PackArray<T>(ref Span<byte> buffer, T[] items) where T : IPacker {
             var count = items?.Length ?? 0;
             WriteInt(ref buffer, count);
 
-            if (items == null)
+            if (items == null) {
                 return;
+            }
 
-            foreach (var item in items)
+            foreach (var item in items) {
                 item.Pack(ref buffer);
+            }
         }
 
-        /// <summary>
-        /// Unpack an array of IPacker items if empty returns a null array.
-        /// </summary>
         public static T[] UnpackArray<T>(ref ReadOnlySpan<byte> buffer) where T : IPacker, new() {
             var count = ReadInt(ref buffer);
 
-            if (count == 0)
+            if (count == 0) {
                 return Array.Empty<T>();
+            }
+
+            if (count > buffer.Length) {
+                var grown = new List<T>(buffer.Length);
+
+                for (var index = 0; index < count; index++) {
+                    var item = new T();
+                    item.Unpack(ref buffer);
+                    grown.Add(item);
+                }
+
+                return grown.ToArray();
+            }
 
             var result = new T[count];
 
-            for (var i = 0; i < count; i++) {
+            for (var index = 0; index < count; index++) {
                 var item = new T();
                 item.Unpack(ref buffer);
-                result[i] = item;
+                result[index] = item;
             }
 
             return result;
         }
 
-        #endregion
+        public static bool TryUnpackArray<T>(ref ReadOnlySpan<byte> buffer, int maximumCount, out T[] value)
+            where T : IPacker, new() {
+            value = null;
+            var remaining = buffer;
 
-        #region List Packing
+            if (!TryReadInt(ref remaining, out var count) || count < 0 || count > maximumCount) {
+                return false;
+            }
 
-        /// <summary>
-        /// Pack a List of IPacker items with length prefix (null treated as empty)
-        /// </summary>
+            var result = new List<T>(Math.Min(count, remaining.Length));
+
+            for (var index = 0; index < count; index++) {
+                var item = new T();
+
+                if (!TryUnpackItem(ref item, ref remaining)) {
+                    return false;
+                }
+
+                result.Add(item);
+            }
+
+            value = count == 0 ? Array.Empty<T>() : result.ToArray();
+            buffer = remaining;
+            return true;
+        }
+
+        public static bool TryUnpackArray<T>(ref ReadOnlySpan<byte> buffer, in DecodeLimits limits, out T[] value)
+            where T : IPacker, new() => TryUnpackArray(ref buffer, limits.MaximumCount, out value);
+
         public static void PackList<T>(ref Span<byte> buffer, List<T> items) where T : IPacker {
             var count = items?.Count ?? 0;
             WriteInt(ref buffer, count);
 
-            if (items == null)
+            if (items == null) {
                 return;
+            }
 
-            foreach (var item in items)
+            foreach (var item in items) {
                 item.Pack(ref buffer);
+            }
         }
 
-        /// <summary>
-        /// Unpack a List of IPacker items and returns an empty list instead of null.
-        /// </summary>
         public static List<T> UnpackList<T>(ref ReadOnlySpan<byte> buffer) where T : IPacker, new() {
             var count = ReadInt(ref buffer);
 
-            if (count == 0)
+            if (count == 0) {
                 return new List<T>();
+            }
 
-            var result = new List<T>(count);
+            var result = new List<T>(Math.Min(count, buffer.Length));
 
-            for (var i = 0; i < count; i++) {
+            for (var index = 0; index < count; index++) {
                 var item = new T();
                 item.Unpack(ref buffer);
                 result.Add(item);
@@ -594,191 +669,131 @@ namespace Spellbound.Core.Packing {
             return result;
         }
 
-        /// <summary>
-        /// Pack a List of int with length prefix (null treated as empty)
-        /// </summary>
+        public static bool TryUnpackList<T>(ref ReadOnlySpan<byte> buffer, int maximumCount, out List<T> value)
+            where T : IPacker, new() {
+            value = null;
+            var remaining = buffer;
+
+            if (!TryReadInt(ref remaining, out var count) || count < 0 || count > maximumCount) {
+                return false;
+            }
+
+            var result = new List<T>(Math.Min(count, remaining.Length));
+
+            for (var index = 0; index < count; index++) {
+                var item = new T();
+
+                if (!TryUnpackItem(ref item, ref remaining)) {
+                    return false;
+                }
+
+                result.Add(item);
+            }
+
+            value = result;
+            buffer = remaining;
+            return true;
+        }
+
+        public static bool TryUnpackList<T>(ref ReadOnlySpan<byte> buffer, in DecodeLimits limits, out List<T> value)
+            where T : IPacker, new() => TryUnpackList(ref buffer, limits.MaximumCount, out value);
+
         public static void PackIntList(ref Span<byte> buffer, List<int> items) {
             var count = items?.Count ?? 0;
             WriteInt(ref buffer, count);
 
-            if (items == null)
+            if (items == null) {
                 return;
+            }
 
-            foreach (var item in items)
+            foreach (var item in items) {
                 WriteInt(ref buffer, item);
+            }
         }
 
-        /// <summary>
-        /// Unpack a List of int and returns an empty list if empty.
-        /// </summary>
         public static List<int> UnpackIntList(ref ReadOnlySpan<byte> buffer) {
             var count = ReadInt(ref buffer);
 
-            if (count == 0)
+            if (count == 0) {
                 return new List<int>();
+            }
+
+            if (count < 0 || (long)count * sizeof(int) > buffer.Length) {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "The buffer holds fewer integers than its count.");
+            }
 
             var result = new List<int>(count);
 
-            for (var i = 0; i < count; i++)
+            for (var index = 0; index < count; index++) {
                 result.Add(ReadInt(ref buffer));
+            }
 
             return result;
         }
 
-        /// <summary>
-        /// Pack a List directly to bytes where null is empty.
-        /// </summary>
-        public static byte[] PackListToBytes<T>(List<T> items) where T : IPacker {
-            var count = items?.Count ?? 0;
+        public static bool TryUnpackIntList(ref ReadOnlySpan<byte> buffer, int maximumCount, out List<int> value) {
+            value = null;
+            var remaining = buffer;
 
-            // Handle empty/null case
-            if (count == 0) {
-                Span<byte> emptyBuf = stackalloc byte[4];
-                var emptySpan = emptyBuf;
-                WriteInt(ref emptySpan, 0);
-
-                return emptyBuf.ToArray();
+            if (!TryReadInt(ref remaining, out var count) || count < 0 || count > maximumCount
+                || (long)count * sizeof(int) > remaining.Length) {
+                return false;
             }
 
-            if (_payloadSizeHint <= StackBufferSize) {
-                Span<byte> stackBuf = stackalloc byte[StackBufferSize];
-                var span = stackBuf;
+            var result = new List<int>(count);
 
-                try {
-                    PackList(ref span, items);
-                    var written = stackBuf.Length - span.Length;
-
-                    return stackBuf[..written].ToArray();
-                }
-                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
+            for (var index = 0; index < count; index++) {
+                result.Add(ReadInt(ref remaining));
             }
 
-            // Need larger buffer
-            var size = Math.Max(_payloadSizeHint, 8192);
-
-            while (true) {
-                var rented = ArrayPool<byte>.Shared.Rent(size);
-
-                try {
-                    var rentedSpan = new Span<byte>(rented, 0, size);
-                    var working = rentedSpan;
-
-                    try {
-                        PackList(ref working, items);
-                        var written = size - working.Length;
-
-                        var result = new byte[written];
-                        Buffer.BlockCopy(rented, 0, result, 0, written);
-                        RecordPayloadSize(written);
-
-                        return result;
-                    }
-                    catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-                }
-                finally {
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
-
-                if (size >= MaxRentedBuffer)
-                    throw new InvalidOperationException(
-                        $"List payload exceeds maximum buffer size of {MaxRentedBuffer} bytes");
-
-                size = Math.Min(size * 2, MaxRentedBuffer);
-            }
+            value = result;
+            buffer = remaining;
+            return true;
         }
 
-        /// <summary>
-        /// Unpack a List directly from bytes (convenience method, never returns null)
-        /// </summary>
+        public static bool TryUnpackIntList(ref ReadOnlySpan<byte> buffer, in DecodeLimits limits,
+            out List<int> value) => TryUnpackIntList(ref buffer, limits.MaximumCount, out value);
+
+        public static byte[] PackListToBytes<T>(List<T> items) where T : IPacker =>
+            PackListToBytes(items, PackingLimits.Default);
+
+        public static byte[] PackListToBytes<T>(List<T> items, in PackingLimits limits) where T : IPacker =>
+            BuildBytes(new ListStep<T>(items), limits);
+
         public static List<T> UnpackListFromBytes<T>(byte[] bytes) where T : IPacker, new() {
-            if (bytes == null || bytes.Length == 0)
+            if (bytes == null || bytes.Length == 0) {
                 return new List<T>();
+            }
 
             ReadOnlySpan<byte> span = bytes;
-
             return UnpackList<T>(ref span);
         }
 
-        #endregion
+        public static byte[] SmartToBytes<T>(in T obj) where T : ISmartPacker =>
+            SmartToBytes(in obj, PackingLimits.Default);
 
-        #region High-Level Helpers
-
-        /// <summary>
-        /// Serialize an ISmartPacker into a byte[] led by its 4-byte stable type tag, so the payload can be
-        /// reconstructed without knowing the type first. A struct resolves its tag at JIT time and never boxes;
-        /// the returned array is the only allocation. An interface- or class-typed argument resolves its tag
-        /// from its runtime type instead.
-        /// </summary>
-        public static byte[] SmartToBytes<T>(in T obj) where T : ISmartPacker {
+        public static byte[] SmartToBytes<T>(in T obj, in PackingLimits limits) where T : ISmartPacker {
             uint tag;
 
-            if (typeof(T).IsValueType)
+            if (typeof(T).IsValueType) {
                 tag = SmartPackerRegistry.GetHash<T>();
+            }
             else {
-                if (obj == null)
+                if (obj == null) {
                     throw new ArgumentNullException(nameof(obj));
+                }
 
                 tag = SmartPackerRegistry.GetHash(obj.GetType());
             }
 
-            if (_payloadSizeHint <= StackBufferSize) {
-                Span<byte> stackBuf = stackalloc byte[StackBufferSize];
-                var span = stackBuf;
-
-                try {
-                    WriteUInt(ref span, tag);
-                    obj.Pack(ref span);
-                    var written = stackBuf.Length - span.Length;
-
-                    return stackBuf[..written].ToArray();
-                }
-                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-            }
-
-            var size = Math.Max(_payloadSizeHint, 8192);
-
-            while (true) {
-                var rented = ArrayPool<byte>.Shared.Rent(size);
-
-                try {
-                    var rentedSpan = new Span<byte>(rented, 0, size);
-                    var working = rentedSpan;
-
-                    try {
-                        WriteUInt(ref working, tag);
-                        obj.Pack(ref working);
-                        var written = size - working.Length;
-                        var result = new byte[written];
-                        Buffer.BlockCopy(rented, 0, result, 0, written);
-                        RecordPayloadSize(written);
-
-                        return result;
-                    }
-                    catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-                }
-                finally {
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
-
-                if (size >= MaxRentedBuffer)
-                    throw new InvalidOperationException(
-                        $"Payload exceeds maximum buffer size of {MaxRentedBuffer} bytes");
-
-                size = Math.Min(size * 2, MaxRentedBuffer);
-            }
+            return BuildBytes(new SmartStep<T>(obj, tag), limits);
         }
 
-        /// <summary>
-        /// Deserialize a payload written by <see cref="SmartToBytes{T}"/> whose type the caller already knows,
-        /// validating the leading tag against T. Returns false with an error log on null/short data or a tag
-        /// that is not T's; value is always a fresh T. A struct unpacks in place with zero heap allocation.
-        /// </summary>
         public static bool TrySmartUnpack<T>(byte[] data, out T value) where T : ISmartPacker, new() {
             value = new T();
 
             if (data == null || data.Length < sizeof(uint)) {
                 Log.Error($"SmartUnpack: '{typeof(T).Name}' payload is too small to hold a 4-byte type tag.");
-
                 return false;
             }
 
@@ -789,63 +804,58 @@ namespace Spellbound.Core.Packing {
             if (tag != expected) {
                 Log.Error($"SmartUnpack: tag {tag} is not '{typeof(T).Name}' ({expected}); " +
                           "payload is corrupt or keyed to a different type.");
-
                 return false;
             }
 
             value.Unpack(ref span);
-
             return true;
         }
 
-        /// <summary>
-        /// Serialize a polymorphic list of ISmartPackers into <paramref name="buffer"/>: a count of the
-        /// non-null entries, then each entry's 4-byte type tag (its <see cref="IRegistryEntry.Hash"/>) and
-        /// packed state. The tag comes from each entry's runtime type, so a list typed as a base round-trips
-        /// its concrete entries.
-        /// </summary>
         public static void WriteSmartList<T>(ref Span<byte> buffer, IReadOnlyList<T> items) where T : ISmartPacker {
             var count = 0;
 
             if (items != null) {
-                for (var i = 0; i < items.Count; i++) {
-                    if (items[i] != null)
+                for (var index = 0; index < items.Count; index++) {
+                    if (items[index] != null) {
                         count++;
+                    }
                 }
             }
 
             WriteInt(ref buffer, count);
 
-            if (items == null)
+            if (items == null) {
                 return;
+            }
 
-            for (var i = 0; i < items.Count; i++) {
-                var item = items[i];
+            for (var index = 0; index < items.Count; index++) {
+                var item = items[index];
 
-                if (item == null)
+                if (item == null) {
                     continue;
+                }
 
                 WriteUInt(ref buffer, item.Hash);
                 item.Pack(ref buffer);
             }
         }
 
-        /// <summary>
-        /// Deserialize a list written by <see cref="WriteSmartList{T}"/>, reconstructing each entry's concrete
-        /// type through <see cref="SmartPackerRegistry"/>. Throws on an unregistered tag or an entry whose type
-        /// is not a <typeparamref name="T"/> — an entry's byte length is only known once its type resolves, so a
-        /// miss cannot be skipped.
-        /// </summary>
         public static List<T> ReadSmartList<T>(ref ReadOnlySpan<byte> buffer) where T : ISmartPacker {
             var count = ReadInt(ref buffer);
+
+            if (count < 0 || (long)count * sizeof(uint) > buffer.Length) {
+                throw new ArgumentOutOfRangeException(nameof(buffer), "The buffer holds fewer entries than its count.");
+            }
+
             var result = new List<T>(count);
 
-            for (var i = 0; i < count; i++) {
+            for (var index = 0; index < count; index++) {
                 var hash = ReadUInt(ref buffer);
 
-                if (!SmartPackerRegistry.TryCreateInstance(hash, out var instance) || instance is not T typed)
+                if (!SmartPackerRegistry.TryCreateInstance(hash, out var instance) || instance is not T typed) {
                     throw new InvalidOperationException(
                         $"SmartList: tag {hash} did not resolve to a registered {typeof(T).Name}.");
+                }
 
                 typed.Unpack(ref buffer);
                 result.Add(typed);
@@ -854,245 +864,209 @@ namespace Spellbound.Core.Packing {
             return result;
         }
 
-        /// <summary>
-        /// Pack a polymorphic ISmartPacker list directly to a byte[]; null/empty yields an empty array.
-        /// </summary>
-        public static byte[] SmartListToBytes<T>(IReadOnlyList<T> items) where T : ISmartPacker {
-            if (items == null || items.Count == 0)
-                return Array.Empty<byte>();
+        public static byte[] SmartListToBytes<T>(IReadOnlyList<T> items) where T : ISmartPacker =>
+            SmartListToBytes(items, PackingLimits.Default);
 
-            return BuildPayload((ref Span<byte> buffer) => WriteSmartList(ref buffer, items));
+        public static byte[] SmartListToBytes<T>(IReadOnlyList<T> items, in PackingLimits limits)
+            where T : ISmartPacker {
+            if (items == null || items.Count == 0) {
+                return Array.Empty<byte>();
+            }
+
+            return BuildBytes(new SmartListStep<T>(items), limits);
         }
 
-        /// <summary>
-        /// Unpack a polymorphic ISmartPacker list from a byte[], returning an empty list on null/empty or
-        /// malformed data (a corrupt or stale tag yields empty rather than throwing to the caller).
-        /// </summary>
         public static List<T> SmartListFromBytes<T>(byte[] bytes) where T : ISmartPacker {
-            if (bytes == null || bytes.Length == 0)
+            if (bytes == null || bytes.Length == 0) {
                 return new List<T>();
+            }
 
             try {
                 ReadOnlySpan<byte> span = bytes;
-
                 return ReadSmartList<T>(ref span);
             }
             catch (Exception e) {
                 Log.Error($"SmartListFromBytes<{typeof(T).Name}>: malformed payload; returning empty. ({e.Message})");
-
                 return new List<T>();
             }
         }
 
-        /// <summary>
-        /// Serialize a value-type IPacker into a byte[].
-        /// Uses stack buffer for small payloads, ArrayPool for larger ones.
-        /// </summary>
-        public static byte[] ToBytes<T>(in T obj) where T : IPacker {
-            // Try stack buffer first for small payloads
-            if (_payloadSizeHint <= StackBufferSize) {
-                Span<byte> stackBuf = stackalloc byte[StackBufferSize];
-                var span = stackBuf;
+        public static byte[] ToBytes<T>(in T obj) where T : IPacker => ToBytes(in obj, PackingLimits.Default);
 
-                try {
-                    obj.Pack(ref span);
-                    var written = stackBuf.Length - span.Length;
+        public static byte[] ToBytes<T>(in T obj, in PackingLimits limits) where T : IPacker =>
+            BuildBytes(new ValueStep<T>(obj), limits);
 
-                    return stackBuf[..written].ToArray();
-                }
-                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-            }
-
-            // Payload too large, use ArrayPool with exponential growth
-            var size = Math.Max(_payloadSizeHint, 8192);
-
-            while (true) {
-                var rented = ArrayPool<byte>.Shared.Rent(size);
-
-                try {
-                    var rentedSpan = new Span<byte>(rented, 0, size);
-                    var working = rentedSpan;
-
-                    try {
-                        obj.Pack(ref working);
-                        var written = size - working.Length;
-
-                        var result = new byte[written];
-                        Buffer.BlockCopy(rented, 0, result, 0, written);
-                        RecordPayloadSize(written);
-
-                        return result;
-                    }
-                    catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-                }
-                finally {
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
-
-                if (size >= MaxRentedBuffer)
-                    throw new InvalidOperationException(
-                        $"Payload exceeds maximum buffer size of {MaxRentedBuffer} bytes");
-
-                size = Math.Min(size * 2, MaxRentedBuffer);
-            }
-        }
-
-        /// <summary>
-        /// Deserialize a struct that implements IPacker from a byte array or ReadOnlySpan
-        /// </summary>
         public static T FromBytes<T>(ReadOnlySpan<byte> bytes) where T : IPacker, new() {
             var span = bytes;
             var obj = new T();
             obj.Unpack(ref span);
-
             return obj;
         }
 
-        /// <summary>
-        /// Pack an array directly to bytes where null is empty.
-        /// </summary>
-        public static byte[] PackArrayToBytes<T>(T[] items) where T : IPacker {
-            var count = items?.Length ?? 0;
+        public static bool TryUnpack<T>(ReadOnlySpan<byte> bytes, out T value) where T : IPacker, new() {
+            value = new T();
+            var span = bytes;
 
-            // Handle empty/null case
-            if (count == 0) {
-                Span<byte> emptyBuf = stackalloc byte[4];
-                var emptySpan = emptyBuf;
-                WriteInt(ref emptySpan, 0);
-
-                return emptyBuf.ToArray();
+            if (!TryUnpackItem(ref value, ref span) || span.Length != 0) {
+                value = new T();
+                return false;
             }
 
-            if (_payloadSizeHint <= StackBufferSize) {
-                Span<byte> stackBuf = stackalloc byte[StackBufferSize];
-                var span = stackBuf;
-
-                try {
-                    PackArray(ref span, items);
-                    var written = stackBuf.Length - span.Length;
-
-                    return stackBuf[..written].ToArray();
-                }
-                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-            }
-
-            // Need larger buffer
-            var size = Math.Max(_payloadSizeHint, 8192);
-
-            while (true) {
-                var rented = ArrayPool<byte>.Shared.Rent(size);
-
-                try {
-                    var rentedSpan = new Span<byte>(rented, 0, size);
-                    var working = rentedSpan;
-
-                    try {
-                        PackArray(ref working, items);
-                        var written = size - working.Length;
-
-                        var result = new byte[written];
-                        Buffer.BlockCopy(rented, 0, result, 0, written);
-                        RecordPayloadSize(written);
-
-                        return result;
-                    }
-                    catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
-                }
-                finally {
-                    ArrayPool<byte>.Shared.Return(rented);
-                }
-
-                if (size >= MaxRentedBuffer)
-                    throw new InvalidOperationException(
-                        $"Array payload exceeds maximum buffer size of {MaxRentedBuffer} bytes");
-
-                size = Math.Min(size * 2, MaxRentedBuffer);
-            }
+            return true;
         }
 
-        /// <summary>
-        /// Unpack an array directly from bytes (convenience method, never returns null)
-        /// </summary>
+        public static bool TryPack<T>(in T value, Span<byte> destination, out int written) where T : IPacker {
+            var span = destination;
+
+            try {
+                value.Pack(ref span);
+            }
+            catch (Exception e) when (IsOverflow(e)) {
+                written = 0;
+                return false;
+            }
+
+            written = destination.Length - span.Length;
+            return true;
+        }
+
+        public static bool TryPack(PackWriter writer, Span<byte> destination, out int written) {
+            if (writer == null) {
+                throw new ArgumentNullException(nameof(writer));
+            }
+
+            var span = destination;
+
+            try {
+                writer(ref span);
+            }
+            catch (Exception e) when (IsOverflow(e)) {
+                written = 0;
+                return false;
+            }
+
+            written = destination.Length - span.Length;
+            return true;
+        }
+
+        public static PooledPackedBytes PackPooled<T>(in T value) where T : IPacker =>
+            PackPooled(in value, PackingLimits.Default);
+
+        public static PooledPackedBytes PackPooled<T>(in T value, in PackingLimits limits) where T : IPacker =>
+            RentBytes(new ValueStep<T>(value), limits);
+
+        public static PooledPackedBytes PackPooled(PackWriter writer) => PackPooled(writer, PackingLimits.Default);
+
+        public static PooledPackedBytes PackPooled(PackWriter writer, in PackingLimits limits) {
+            if (writer == null) {
+                throw new ArgumentNullException(nameof(writer));
+            }
+
+            return RentBytes(new WriterStep(writer), limits);
+        }
+
+        public static byte[] PackArrayToBytes<T>(T[] items) where T : IPacker =>
+            PackArrayToBytes(items, PackingLimits.Default);
+
+        public static byte[] PackArrayToBytes<T>(T[] items, in PackingLimits limits) where T : IPacker =>
+            BuildBytes(new ArrayStep<T>(items), limits);
+
         public static T[] UnpackArrayFromBytes<T>(byte[] bytes) where T : IPacker, new() {
-            if (bytes == null || bytes.Length == 0)
+            if (bytes == null || bytes.Length == 0) {
                 return Array.Empty<T>();
+            }
 
             ReadOnlySpan<byte> span = bytes;
-
             return UnpackArray<T>(ref span);
         }
 
-        /// <summary>
-        /// Equality check for packed item data.
-        /// </summary>
         public static bool AreBytesEqual(byte[] a, byte[] b) {
-            if (a == null && b == null)
+            if (a == null && b == null) {
                 return true;
+            }
 
-            // If the byte array is null or empty return true.
-            // TODO: This potentially has implications on craftable material items but beyond scope for now.
-            if (NoData(a) && NoData(b))
+            if (NoData(a) && NoData(b)) {
                 return true;
+            }
 
-            if (a == null || b == null)
+            if (a == null || b == null) {
                 return false;
+            }
 
             return a.AsSpan().SequenceEqual(b);
 
-            // Helper method that returns a bool if the byte array is null or empty.
             static bool NoData(byte[] x) => x == null || x.Length == 0;
         }
 
-        /// <summary>
-        /// Handles the stack-first + ArrayPool fallback pattern.
-        /// Caller provides only the write logic.
-        /// </summary>
-        public static byte[] BuildPayload(PackWriter writer) {
-            if (_payloadSizeHint <= StackBufferSize) {
-                Span<byte> stackBuf = stackalloc byte[StackBufferSize];
-                var span = stackBuf;
+        public static byte[] BuildPayload(PackWriter writer) => BuildPayload(writer, PackingLimits.Default);
 
-                try {
-                    writer(ref span);
-                    var written = stackBuf.Length - span.Length;
-
-                    return stackBuf[..written].ToArray();
-                }
-                catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
+        public static byte[] BuildPayload(PackWriter writer, in PackingLimits limits) {
+            if (writer == null) {
+                throw new ArgumentNullException(nameof(writer));
             }
 
-            var size = Math.Max(_payloadSizeHint, 8192);
+            return BuildBytes(new WriterStep(writer), limits);
+        }
+
+        private static bool TryUnpackItem<T>(ref T item, ref ReadOnlySpan<byte> buffer) where T : IPacker {
+            var span = buffer;
+
+            try {
+                item.Unpack(ref span);
+            }
+            catch (Exception e) when (IsOverflow(e) || e is InvalidOperationException || e is OverflowException) {
+                return false;
+            }
+
+            buffer = span;
+            return true;
+        }
+
+        private static bool IsOverflow(Exception e) =>
+            e is IndexOutOfRangeException || (e is ArgumentException && e is not ArgumentNullException);
+
+        private static byte[] BuildBytes<TStep>(in TStep step, in PackingLimits limits)
+            where TStep : struct, IPackStep {
+            if (limits.FirstRentBytes > limits.StackBufferBytes) {
+                Span<byte> stack = stackalloc byte[limits.StackBufferBytes];
+                var span = stack;
+
+                try {
+                    step.Pack(ref span);
+                    return stack[..(stack.Length - span.Length)].ToArray();
+                }
+                catch (Exception e) when (IsOverflow(e)) {
+                }
+            }
+
+            using var rented = RentBytes(step, limits);
+            return rented.Bytes.ToArray();
+        }
+
+        private static PooledPackedBytes RentBytes<TStep>(in TStep step, in PackingLimits limits)
+            where TStep : struct, IPackStep {
+            var size = Math.Min(limits.FirstRentBytes, limits.MaximumPayloadBytes);
 
             while (true) {
                 var rented = ArrayPool<byte>.Shared.Rent(size);
+                var capacity = Math.Min(rented.Length, limits.MaximumPayloadBytes);
+                var span = rented.AsSpan(0, capacity);
 
                 try {
-                    var rentedSpan = new Span<byte>(rented, 0, size);
-                    var working = rentedSpan;
-
-                    try {
-                        writer(ref working);
-                        var written = size - working.Length;
-                        var result = new byte[written];
-                        Buffer.BlockCopy(rented, 0, result, 0, written);
-                        RecordPayloadSize(written);
-
-                        return result;
-                    }
-                    catch (Exception e) when (e is ArgumentException or IndexOutOfRangeException) { }
+                    step.Pack(ref span);
+                    return new PooledPackedBytes(rented, capacity - span.Length);
                 }
-                finally {
+                catch (Exception e) when (IsOverflow(e)) {
                     ArrayPool<byte>.Shared.Return(rented);
                 }
 
-                if (size >= MaxRentedBuffer)
+                if (size >= limits.MaximumPayloadBytes) {
                     throw new InvalidOperationException(
-                        $"Payload exceeds maximum buffer size of {MaxRentedBuffer} bytes");
+                        $"Payload exceeds the largest allowed payload of {limits.MaximumPayloadBytes} bytes.");
+                }
 
-                size = Math.Min(size * 2, MaxRentedBuffer);
+                size = (int)Math.Min((long)size * 2, limits.MaximumPayloadBytes);
             }
         }
-
-        #endregion
     }
 }

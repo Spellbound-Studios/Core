@@ -13,11 +13,13 @@ namespace Spellbound.Core.Packing {
             return instance;
         }
         
-        public static byte[] SmartPack(this ISmartPacker packer) {
+        public static byte[] SmartPack(this ISmartPacker packer) => SmartPack(packer, PackingLimits.Default);
+
+        public static byte[] SmartPack(this ISmartPacker packer, in PackingLimits limits) {
             return Packer.BuildPayload((ref Span<byte> buffer) => {
                 Packer.WriteUInt(ref buffer, packer.Hash);
                 packer.Pack(ref buffer);
-            });
+            }, limits);
         }
     }
 }

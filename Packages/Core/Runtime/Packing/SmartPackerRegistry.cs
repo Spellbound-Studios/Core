@@ -79,10 +79,14 @@ namespace Spellbound.Core.Packing {
             throw new Exception($"SmartPackerRegistry: '{type.FullName}' is not registered.");
         }
         
-        public static uint GetHash<T>() where T : ISmartPacker => Cache<T>.Value;
+        public static uint GetHash<T>() where T : ISmartPacker => _isLoaded ? Cache<T>.Value : GetHash(typeof(T));
 
         private static class Cache<T> where T : ISmartPacker {
-            public static readonly uint Value = GetHash(typeof(T));
+            public static readonly uint Value;
+
+            static Cache() {
+                Value = GetHash(typeof(T));
+            }
         }
 
 

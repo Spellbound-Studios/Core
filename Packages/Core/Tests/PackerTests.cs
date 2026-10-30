@@ -343,84 +343,6 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void BitwiseVariantsRoundTrip() {
-            var buffer = new byte[32];
-            var writeSpan = buffer.AsSpan();
-
-            Packer.WriteShortBitwise(ref writeSpan, short.MinValue);
-            Packer.WriteUShortBitwise(ref writeSpan, ushort.MaxValue);
-            Packer.WriteIntBitwise(ref writeSpan, int.MinValue);
-            Packer.WriteUIntBitwise(ref writeSpan, uint.MaxValue);
-            Packer.WriteLongBitwise(ref writeSpan, long.MinValue);
-            Packer.WriteULongBitwise(ref writeSpan, ulong.MaxValue);
-            Packer.WriteFloatBitwise(ref writeSpan, -12.5f);
-
-            Assert.AreEqual(0, writeSpan.Length);
-
-            ReadOnlySpan<byte> readSpan = buffer;
-
-            Assert.AreEqual(short.MinValue, Packer.ReadShortBitwise(ref readSpan));
-            Assert.AreEqual(ushort.MaxValue, Packer.ReadUShortBitwise(ref readSpan));
-            Assert.AreEqual(int.MinValue, Packer.ReadIntBitwise(ref readSpan));
-            Assert.AreEqual(uint.MaxValue, Packer.ReadUIntBitwise(ref readSpan));
-            Assert.AreEqual(long.MinValue, Packer.ReadLongBitwise(ref readSpan));
-            Assert.AreEqual(ulong.MaxValue, Packer.ReadULongBitwise(ref readSpan));
-            Assert.AreEqual(-12.5f, Packer.ReadFloatBitwise(ref readSpan));
-            Assert.AreEqual(0, readSpan.Length);
-        }
-
-        [Test]
-        public void BitwiseVariantsMatchBitConverterLayout() {
-            var standard = new byte[32];
-            var bitwise = new byte[32];
-            var standardSpan = standard.AsSpan();
-            var bitwiseSpan = bitwise.AsSpan();
-
-            Packer.WriteShort(ref standardSpan, -1234);
-            Packer.WriteUShort(ref standardSpan, 65000);
-            Packer.WriteInt(ref standardSpan, -123456789);
-            Packer.WriteUInt(ref standardSpan, 3123456789u);
-            Packer.WriteLong(ref standardSpan, -1234567890123L);
-            Packer.WriteULong(ref standardSpan, 12345678901234567890ul);
-            Packer.WriteFloat(ref standardSpan, 1.5f);
-
-            Packer.WriteShortBitwise(ref bitwiseSpan, -1234);
-            Packer.WriteUShortBitwise(ref bitwiseSpan, 65000);
-            Packer.WriteIntBitwise(ref bitwiseSpan, -123456789);
-            Packer.WriteUIntBitwise(ref bitwiseSpan, 3123456789u);
-            Packer.WriteLongBitwise(ref bitwiseSpan, -1234567890123L);
-            Packer.WriteULongBitwise(ref bitwiseSpan, 12345678901234567890ul);
-            Packer.WriteFloatBitwise(ref bitwiseSpan, 1.5f);
-
-            Assert.AreEqual(standard, bitwise);
-        }
-
-        [Test]
-        public void BitwiseVariantsReadWhatBitConverterWrote() {
-            var buffer = new byte[28];
-            var writeSpan = buffer.AsSpan();
-
-            Packer.WriteShort(ref writeSpan, -4321);
-            Packer.WriteUShort(ref writeSpan, 64321);
-            Packer.WriteInt(ref writeSpan, -987654321);
-            Packer.WriteUInt(ref writeSpan, 4000000000u);
-            Packer.WriteLong(ref writeSpan, -9876543210123L);
-            Packer.WriteULong(ref writeSpan, 18000000000000000000ul);
-
-            Assert.AreEqual(0, writeSpan.Length);
-
-            ReadOnlySpan<byte> readSpan = buffer;
-
-            Assert.AreEqual((short)-4321, Packer.ReadShortBitwise(ref readSpan));
-            Assert.AreEqual((ushort)64321, Packer.ReadUShortBitwise(ref readSpan));
-            Assert.AreEqual(-987654321, Packer.ReadIntBitwise(ref readSpan));
-            Assert.AreEqual(4000000000u, Packer.ReadUIntBitwise(ref readSpan));
-            Assert.AreEqual(-9876543210123L, Packer.ReadLongBitwise(ref readSpan));
-            Assert.AreEqual(18000000000000000000ul, Packer.ReadULongBitwise(ref readSpan));
-            Assert.AreEqual(0, readSpan.Length);
-        }
-
-        [Test]
         public void StringsRoundTripIncludingUnicode() {
             var unicode = Packer.FromBytes<TextPayload>(Packer.ToBytes(new TextPayload { Text = "Zażółć 🚀 jaźń" }));
             var empty = Packer.FromBytes<TextPayload>(Packer.ToBytes(new TextPayload { Text = string.Empty }));
@@ -494,43 +416,6 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual(new Vector2(-4.5f, 5.5f), Packer.ReadVector2(ref readSpan));
             Assert.AreEqual(new Quaternion(0.1f, 0.2f, 0.3f, 0.4f), Packer.ReadQuaternion(ref readSpan));
             Assert.AreEqual(0, readSpan.Length);
-        }
-
-        [Test]
-        public void VectorAndQuaternionBitwiseRoundTrip() {
-            var buffer = new byte[36];
-            var writeSpan = buffer.AsSpan();
-
-            Packer.WriteVector3Bitwise(ref writeSpan, new Vector3(1.5f, -2.5f, 3.5f));
-            Packer.WriteVector2Bitwise(ref writeSpan, new Vector2(-4.5f, 5.5f));
-            Packer.WriteQuaternionBitwise(ref writeSpan, new Quaternion(0.1f, 0.2f, 0.3f, 0.4f));
-
-            Assert.AreEqual(0, writeSpan.Length);
-
-            ReadOnlySpan<byte> readSpan = buffer;
-
-            Assert.AreEqual(new Vector3(1.5f, -2.5f, 3.5f), Packer.ReadVector3Bitwise(ref readSpan));
-            Assert.AreEqual(new Vector2(-4.5f, 5.5f), Packer.ReadVector2Bitwise(ref readSpan));
-            Assert.AreEqual(new Quaternion(0.1f, 0.2f, 0.3f, 0.4f), Packer.ReadQuaternionBitwise(ref readSpan));
-            Assert.AreEqual(0, readSpan.Length);
-        }
-
-        [Test]
-        public void VectorBitwiseMatchesBitConverterLayout() {
-            var standard = new byte[36];
-            var bitwise = new byte[36];
-            var standardSpan = standard.AsSpan();
-            var bitwiseSpan = bitwise.AsSpan();
-
-            Packer.WriteVector3(ref standardSpan, new Vector3(1.5f, -2.5f, 3.5f));
-            Packer.WriteVector2(ref standardSpan, new Vector2(-4.5f, 5.5f));
-            Packer.WriteQuaternion(ref standardSpan, new Quaternion(0.1f, 0.2f, 0.3f, 0.4f));
-
-            Packer.WriteVector3Bitwise(ref bitwiseSpan, new Vector3(1.5f, -2.5f, 3.5f));
-            Packer.WriteVector2Bitwise(ref bitwiseSpan, new Vector2(-4.5f, 5.5f));
-            Packer.WriteQuaternionBitwise(ref bitwiseSpan, new Quaternion(0.1f, 0.2f, 0.3f, 0.4f));
-
-            Assert.AreEqual(standard, bitwise);
         }
 
         [Test]

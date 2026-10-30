@@ -8,6 +8,8 @@ Gives every package one vocabulary: how to log, pack bytes, identify a thing, ro
 
 `CoreKit`. `CoreKit.Operations` is the host that runs an operation line; `CoreKit.Packing.Describe(type)` writes the packed layout of a type.
 
+Packing serves the save format and the wire. A type implements `IPacker` with `Pack(ref Span<byte>)` and `Unpack(ref ReadOnlySpan<byte>)` over the `Packer` reads and writes (little-endian primitives, strings and byte runs with a length prefix, vectors, lists and arrays, varints). `Packer.ToBytes(in value)` allocates the result; `CoreKit.Packing.TryPack(in value, destination, out written)` packs into a buffer the caller owns and answers false when it is too small; `CoreKit.Packing.PackPooled(in value)` rents one from the runtime's array pool and the `PooledPackedBytes` returns it on `Dispose`; `PackingLimits` bounds the stack buffer, the first rented size and the largest payload as an optional last argument. Bytes from the wire are read with the `TryRead` twins, which answer false and leave the span where it was, with `DecodeLimits` or a maximum for strings, byte runs and counts, or with `CoreKit.Packing.TryUnpack(bytes, out value)`, which refuses a short payload and trailing bytes. `BitWriter` and `BitReader` pack bits, varints and `Quantization` values into a span; `CoreKit.Packing.PackDelta(baseline, current, destination, out written)` and `TryUnpackDelta` carry the difference between two payloads, and who holds which baseline is Networking's.
+
 ```csharp
 var run = CoreKit.Operations.Run("core help", OperationCaller.Development(), ObservationContext.Discard);
 Debug.Log(run.Result.Text);
