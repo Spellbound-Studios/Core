@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using Spellbound.Core.Logging;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Tests.OperationFixture;
 using UnityEngine;
@@ -37,7 +38,7 @@ namespace Spellbound.Core.Tests {
             _suspension.Dispose();
         }
 
-        private string Text(string line) => _host.Run(line, _developer).Result.Text;
+        private string Text(string line) => _host.Run(line, _developer, ObservationContext.Discard).Result.Text;
 
         [Test]
         public void PositionalAndNamedArgumentsAreTheSameCall() {
@@ -153,10 +154,10 @@ namespace Spellbound.Core.Tests {
         public void AudienceIsCheckedAgainstTheCaller() {
             Assert.AreEqual("refused: fixture secret needs audience 'approver'; this caller holds 'developer'", Text("fixture secret"));
             var approver = new OperationCaller("window", OperationAudiences.Developer, OperationAudiences.Approver);
-            Assert.AreEqual("succeeded: approved", _host.Run("fixture secret", approver).Result.Text);
+            Assert.AreEqual("succeeded: approved", _host.Run("fixture secret", approver, ObservationContext.Discard).Result.Text);
             var nobody = new OperationCaller("nobody");
-            Assert.AreEqual("succeeded: hi", _host.Run("fixture echo hi", nobody).Result.Text);
-            Assert.AreEqual("refused: fixture add needs audience 'developer'; this caller holds nothing", _host.Run("fixture add 1", nobody).Result.Text);
+            Assert.AreEqual("succeeded: hi", _host.Run("fixture echo hi", nobody, ObservationContext.Discard).Result.Text);
+            Assert.AreEqual("refused: fixture add needs audience 'developer'; this caller holds nothing", _host.Run("fixture add 1", nobody, ObservationContext.Discard).Result.Text);
         }
 
         [Test]
@@ -238,7 +239,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void ProgressLinesReachTheRun() {
-            var run = _host.Run("fixture progress", _developer);
+            var run = _host.Run("fixture progress", _developer, ObservationContext.Discard);
             CollectionAssert.AreEqual(new[] { "step 1", "step 2" }, run.Lines);
             Assert.AreEqual("succeeded: done", run.Result.Text);
         }
@@ -246,31 +247,31 @@ namespace Spellbound.Core.Tests {
         [Test]
         public void ProgressLinesAreRaisedAsTheyArrive() {
             var seen = new List<string>();
-            var run = _host.Run("fixture echo quiet", _developer);
+            var run = _host.Run("fixture echo quiet", _developer, ObservationContext.Discard);
             run.Reported += seen.Add;
             Assert.AreEqual(0, seen.Count);
-            var reporting = _host.Run("fixture progress", _developer);
+            var reporting = _host.Run("fixture progress", _developer, ObservationContext.Discard);
             Assert.AreEqual(2, reporting.Lines.Count);
         }
 
         [Test]
         public void PlaceholdersAreFilledAfterTokenising() {
             var placeholders = new Dictionary<string, string> { { "text", "two words --not-a-flag" } };
-            Assert.AreEqual("succeeded: two words --not-a-flag", _host.Run("fixture echo {text}", _developer, placeholders).Result.Text);
-            Assert.AreEqual("succeeded: pre-two words --not-a-flag", _host.Run("fixture echo pre-{text}", _developer, placeholders).Result.Text);
+            Assert.AreEqual("succeeded: two words --not-a-flag", _host.Run("fixture echo {text}", _developer, placeholders, ObservationContext.Discard).Result.Text);
+            Assert.AreEqual("succeeded: pre-two words --not-a-flag", _host.Run("fixture echo pre-{text}", _developer, placeholders, ObservationContext.Discard).Result.Text);
             Assert.AreEqual("invalid: placeholder {missing} has no value (supplied: text)",
-                _host.Run("fixture echo {missing}", _developer, placeholders).Result.Text);
+                _host.Run("fixture echo {missing}", _developer, placeholders, ObservationContext.Discard).Result.Text);
             Assert.AreEqual("invalid: placeholder {text} has no value (supplied: none)", Text("fixture echo {text}"));
         }
 
         [Test]
         public void RunAllStopsAtTheFirstResultThatIsNotSucceeded() {
-            var chain = _host.RunAll(new[] { "fixture echo one", "fixture add 1 x", "fixture echo three" }, _developer);
+            var chain = _host.RunAll(new[] { "fixture echo one", "fixture add 1 x", "fixture echo three" }, _developer, ObservationContext.Discard);
             Assert.IsTrue(chain.IsDone);
             Assert.AreEqual(2, chain.Results.Count);
             Assert.AreEqual("succeeded: one", chain.Results[0].Text);
             Assert.AreEqual(OperationStatus.Invalid, chain.Result.Status);
-            var whole = _host.RunAll(new[] { "fixture echo one", "fixture echo two" }, _developer);
+            var whole = _host.RunAll(new[] { "fixture echo one", "fixture echo two" }, _developer, ObservationContext.Discard);
             Assert.AreEqual(2, whole.Results.Count);
             Assert.AreEqual("succeeded: two", whole.Result.Text);
             Assert.IsTrue(whole.Result.Succeeded);
@@ -278,7 +279,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void RunAllCarriesProgressLines() {
-            var chain = _host.RunAll(new[] { "fixture progress", "fixture echo end" }, _developer);
+            var chain = _host.RunAll(new[] { "fixture progress", "fixture echo end" }, _developer, ObservationContext.Discard);
             CollectionAssert.AreEqual(new[] { "step 1", "step 2" }, chain.Lines);
         }
 
@@ -286,13 +287,13 @@ namespace Spellbound.Core.Tests {
         public void InvocationRunsWithTypedValues() {
             var description = _host.Catalog.Describe("fixture", "add");
             var invocation = new OperationInvocation(description.Identifier, new object[] { 2, 5 });
-            Assert.AreEqual("succeeded: 7", _host.Run(invocation, _developer).Result.Text);
+            Assert.AreEqual("succeeded: 7", _host.Run(invocation, _developer, ObservationContext.Discard).Result.Text);
             var wrong = new OperationInvocation(description.Identifier, new object[] { "two", 5 });
-            Assert.AreEqual("invalid: --left: a String is not a Int32", _host.Run(wrong, _developer).Result.Text);
+            Assert.AreEqual("invalid: --left: a String is not a Int32", _host.Run(wrong, _developer, ObservationContext.Discard).Result.Text);
             var unknown = new OperationInvocation(12345u, new object[0]);
-            Assert.AreEqual("invalid: no operation has the identifier 12345", _host.Run(unknown, _developer).Result.Text);
+            Assert.AreEqual("invalid: no operation has the identifier 12345", _host.Run(unknown, _developer, ObservationContext.Discard).Result.Text);
             var destroy = new OperationInvocation(_host.Catalog.Describe("fixture", "wipe").Identifier, new object[0], null, true);
-            Assert.AreEqual("succeeded: wiped 3 things", _host.Run(destroy, _developer).Result.Text);
+            Assert.AreEqual("succeeded: wiped 3 things", _host.Run(destroy, _developer, ObservationContext.Discard).Result.Text);
         }
 
         [Test]
@@ -301,7 +302,7 @@ namespace Spellbound.Core.Tests {
             Assert.IsNull(failure);
             Assert.AreEqual(_host.Catalog.Describe("fixture", "add").Identifier, invocation.Identifier);
             CollectionAssert.AreEqual(new object[] { 2, 9 }, invocation.Values);
-            Assert.AreEqual("succeeded: 11", _host.Run(invocation, _developer).Result.Text);
+            Assert.AreEqual("succeeded: 11", _host.Run(invocation, _developer, ObservationContext.Discard).Result.Text);
             Assert.IsNull(_host.Parse("fixture add", null, out failure));
             Assert.AreEqual(OperationStatus.Invalid, failure.Status);
         }
@@ -350,15 +351,15 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void ResultSeverityFollowsTheStatus() {
-            Assert.AreEqual(OperationSeverity.Information, _host.Run("fixture echo hi", _developer).Result.Severity);
-            Assert.AreEqual(OperationSeverity.Error, _host.Run("fixture add x", _developer).Result.Severity);
-            Assert.AreEqual(OperationSeverity.Warning, _host.Run("fixture secret", _developer).Result.Severity);
-            Assert.AreEqual(OperationSeverity.Information, _host.Run("fixture wipe --dry-run", _developer).Result.Severity);
+            Assert.AreEqual(OperationSeverity.Information, _host.Run("fixture echo hi", _developer, ObservationContext.Discard).Result.Severity);
+            Assert.AreEqual(OperationSeverity.Error, _host.Run("fixture add x", _developer, ObservationContext.Discard).Result.Severity);
+            Assert.AreEqual(OperationSeverity.Warning, _host.Run("fixture secret", _developer, ObservationContext.Discard).Result.Severity);
+            Assert.AreEqual(OperationSeverity.Information, _host.Run("fixture wipe --dry-run", _developer, ObservationContext.Discard).Result.Severity);
         }
 
         [UnityTest]
         public IEnumerator TaskReturningOperationCompletesLater() {
-            var run = _host.Run("fixture wait --milliseconds 50", _developer);
+            var run = _host.Run("fixture wait --milliseconds 50", _developer, ObservationContext.Discard);
             Assert.IsFalse(run.IsDone);
             Assert.IsTrue(run.keepWaiting);
             var task = run.AsTask();
@@ -380,7 +381,7 @@ namespace Spellbound.Core.Tests {
             const int Calls = 1000;
 
             for (var i = 0; i < Calls; i++) {
-                _host.Run("fixture add 1 2", _developer);
+                _host.Run("fixture add 1 2", _developer, ObservationContext.Discard);
             }
 
             var perCall = watch.Elapsed.TotalMilliseconds / Calls;

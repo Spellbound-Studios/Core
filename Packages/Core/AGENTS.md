@@ -9,11 +9,13 @@ Gives every package one vocabulary: how to log, pack bytes, identify a thing, ro
 `CoreKit`. `CoreKit.Operations` is the host that runs an operation line; `CoreKit.Packing.Describe(type)` writes the packed layout of a type.
 
 ```csharp
-var run = CoreKit.Operations.Run("core help", OperationCaller.Development());
+var run = CoreKit.Operations.Run("core help", OperationCaller.Development(), ObservationContext.Discard);
 Debug.Log(run.Result.Text);
 ```
 
-`CoreKit.Time.StartClock(source)`, or `StartClock(rate)` for the default game-time source, starts a `TickClock` that the driver advances every fixed step and that raises `Stepped` at the latest execution order; `CoreKit.Time.StopClock(clock)` ends it.
+`CoreKit.Time.StartClock(source, observations)`, or `StartClock(rate, observations)` for the default game-time source, starts a `TickClock` that the driver advances every fixed step and that raises `Stepped` at the latest execution order; `CoreKit.Time.StopClock(clock)` ends it. The clock reports a held step under `core.clock.held` and a changed source rate under `core.clock.rate_changed`, into the context it was given.
+
+A package declares what it observes once, as static fields: `CoreKit.Observations.Counter(key, description)`, `Occurrence(key, description)`, `Gauge(key, description, unit)` and `Cost(key, description, unit, defaultBudget, defaultQualityLevel)`, the key spelled `package.subject.name` and the description required. It reports against an `ObservationContext` a world instance owns, made by `CoreKit.Observations.CreateContext(name, settings)`: `counter.Add(context, reason)`, `occurrence.Record(context, tick, subject)`, `gauge.Set(context, value)`, `cost.Record(context, amount)` or `using (cost.Measure(context))`. Every door that reports takes the context as its last explicit argument and never looks one up; a caller that wants none passes `ObservationContext.Discard`. `context.Read(package, readings)` fills a caller-owned list of `ObservationReading` without allocating, `TryRead`, `ReadReasons`, `Version(key)` and `PackageVersion(package)` read one key or a package's change count, `SetBudget` and `SetQualityLevel` override a declaration's defaults, and `ObservationContexts.All` lists the live contexts for a collector. `CoreKit.Observations.Declared()` lists every declaration with nothing running, `Reason(name)` registers a reason name once, and `Compare(before, after, ratios)` gives the ratio per key. `OperationHost.Run(line, caller, observations)` records each operation group's duration under `<group>.operations` and its failures under `<group>.operation_failures`; `CallSiteLogSink` counts logged lines under `core.log.<level>` with the call site as the reason.
 
 A package declares what an agent or a person can call with `[assembly: OperationGroup(name, job)]` on its assembly and `[Operation(name, description, effect)]` on a public static method, each parameter described by `[Argument(description)]`. The same declaration serves C#, a console, the Spellbound window and the Unity command line, where `spellbound_run` takes one operation line. `core context --package <group>` prints a package's own context with its operations. The generated text below is refreshed from the live catalog by `core context`.
 
@@ -23,7 +25,7 @@ A package declares what it is once, in the `Identity.asset` at its root, a `Pack
 
 An editor window or inspector takes the installed look with `EditorLook.Dress(root)`: the theme class, Core's layout sheet, every sheet a package registered through `EditorLook.Register(LookSource)` and the project's own from an `EditorLookSettings` asset. Core ships no theme; a `HeaderBar` shows one of the `HeaderStates`, and `ButtonVariants` and `ChipTones` name the shared classes a look styles. A look or project rule is scoped under `.sb-theme`, so it wins over Core's layout sheet.
 
-<!-- spellbound:operations bba282be -->
+<!-- spellbound:operations a693157a -->
 com.spellboundstudios.core
 Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core about`: Describes this process: the Unity version, the render pipeline and the operation groups it holds. [reads, anyone]
@@ -42,6 +44,12 @@ Operations of the group `core`, run as `<group> <operation> [arguments]`:
   - `--offset`: How many entries to skip from the start. Default: 0.
   - `--limit`: How many entries to list. Default: 50.
 - `core ledger`: Lists every installed Spellbound package's Ledger rows: the Unity types it builds on and what moved out of it. [reads, anyone]
+- `core observation --key <text> [--world <text>]`: Prints one observation key: its declaration, its reading in one world and the counts by reason. [reads, anyone]
+  - `--key`: The key, as package.subject.name.
+  - `--world`: The world whose reading to show; leave it out when one world is live. Default: none.
+- `core observations [--world <text>] [--prefix <text>]`: Lists the declared observation keys with their readings in one world: kind, unit, value, count, peak, budget and quality level. [reads, anyone]
+  - `--world`: The world whose readings to show; leave it out when one world is live. Default: none.
+  - `--prefix`: Only the keys that start with this text. Default: none.
 - `core preview --target <scriptable-object>`: Describes an authored definition: its previewer's summary and pictures, and the lines every registered check contributes. [reads, anyone]
   - `--target`: The definition asset, as asset:<path> or asset:<name>.
 - `core stats`: Lists each operation this host has run with its calls, failures and durations in milliseconds. [reads, developer]
@@ -83,6 +91,8 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 - Nothing per frame or per tick goes through an operation: the host reflects, parses and allocates per call.
 - `OperationSettings` is optional. Every field has a default, so no asset is required; the field `bridgeAudiences` is the one setting that grants the audience `approver` to an agent on the Unity command line.
 - `core approve` needs the audience `approver` and is refused while the draft has an error finding; a draft lives in `OperationSettings.draftsFolder` (default `Assets/Drafts`) and every path an authoring operation writes is under `Assets` or `Library/Spellbound`.
+- An observation key is declared once, by one package, as an immutable static field of a class that holds only declarations (`<Package>Observations`), with a required description; a second declaration of a key with another kind or description throws at static initialisation. `Declared()` finds such classes in every assembly that references Core and runs their static constructors, so a class that mixes a declaration with other static state is not scanned. A context is read and written on the main thread; `CallSiteLogSink` drops a line emitted from another thread and counts the drop in `DroppedOffThread`.
+- A reading's `Value`, `Total` and `Peak` follow the kind: a counter's value is its running total and its peak the largest single add; an occurrence's value is its count; a gauge's value is the last set and its peak the highest; a cost's value is the last amount, its total the sum and its peak the largest amount. `Count` is the number of reports in every kind.
 
 ## Not for
 
@@ -94,11 +104,11 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 
 - `core revise` and the authored-key scan (`core.unknown-key`) are not built yet; a draft is made new, and a renamed field is re-authored.
 - The inspector banner shows a definition's last report and runs the full set on a save or from its button; it does not yet revalidate while a person edits.
-- Validation timings stay on the run (`core validate --timings`) until the observation model exists.
-- `core observations` waits for the observation model; `core stats` reads the host's own tally of calls, failures and durations.
+- Validation timings stay on the run (`core validate --timings`); they are not yet reported as costs.
+- The flight recorder, guards with a policy, the intent key and ledger, the native queue for jobs, the profiler mirror and the key validator's checks are not built yet; an occurrence only counts (its tick and subject are taken and not kept until the recorder exists), and a packed snapshot of a context's readings does not exist.
+- A line captured from Unity's own log (`UnityLogCapture`) reaches `CallSiteLogSink` with the source `Unity`, the log type as its member and line 0, so every `Debug.Log` from anywhere counts under one call site per log type.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
 - The Spellbound window holds no page of Core's own yet: the Line, Package, Operations and Drafts pages are not built.
-- The clock counts a changed source rate in `TickClock.RateChanges` and logs the first change; the guard key `core.clock.rate_changed` waits for the observation model.
 
 ## Ledger
 
@@ -109,7 +119,7 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 | U-003 | Object parent queries over entities | `Spellbound.Core.ObjectHandling.ObjectParent` | Entities, native containers | Moved | 6000.4 | Moved to native columns in WorldObjects: a column store and a Burst job need no Unity feature. Watch Unity's GameObjects are Entities work, which may one day give GameObjects chunk storage. 6.7 beta probe 2026-10-25: changed, EntityId from int is an error, and ObjectParent.cs:580 fails on the removed managed shared component call. | Unity forum, CoreCLR, Scripting, and ECS Status Update (2026-03-06) and the thread 2026 ECS for all (2026-08-05) | | EntityId; unified transform; GameObjects are Entities |
 | U-006 | Resources.LoadAll registries in Core, Modifiers, Controller, UI and WorldForge | ``Spellbound.Core.Registries.ResourceRegistry`1`` | Preloaded Assets, Addressables | Moved | 6000.4 | Unity combines everything under Resources into one serialized file whose index costs memory even for objects never loaded, and points to Addressables instead; preloaded assets load at player start and stay alive until it ends. | Unity manual, The Resources folder (Manual/LoadingResourcesatRuntime.html); Unity 6000.4 script reference, PlayerSettings.GetPreloadedAssets | | Resources; Preloaded Assets; Addressables |
 | U-007 | Core logger and sinks | `Spellbound.Core.Logging.Log` | Debug.unityLogger, the Logging package | Keeps | 6000.4 | The Logging package is deprecated from 6.3 and Unity says the default logging covers most uses; our sinks, tallies and levels sit on Debug. | Unity Logging package 1.5 manual, deprecated from 6.3 | | Debug.unityLogger; Logging package; deprecated |
-| U-008 | Core observation model | | ProfilerRecorder, ProfilerCounterValue, FrameTimingManager | Builds on | 6000.4 | Unity compiles Profiler counters out of non-development builds, so Core keeps its own counters and mirrors them to Profiler counters in development builds only; FrameTimingManager works in release builds when Frame Timing Stats is on. Not built yet, area 3 builds it. | Unity 6000.4 manual, custom Profiler counters; Unity 6000.4 script reference, FrameTimingManager | | ProfilerRecorder; ProfilerCounterValue; FrameTimingManager |
+| U-008 | Core observation model | `Spellbound.Core.Observations.ObservationContext` | ProfilerRecorder, ProfilerCounterValue, FrameTimingManager | Builds on | 6000.4 | Unity compiles Profiler counters out of non-development builds, so Core keeps its own counters in the context and will mirror them to Profiler counters in development builds only; FrameTimingManager works in release builds when Frame Timing Stats is on. The declarations and the per-world context are built; the mirror is not. | Unity 6000.4 manual, custom Profiler counters; Unity 6000.4 script reference, FrameTimingManager | | ProfilerRecorder; ProfilerCounterValue; FrameTimingManager |
 | U-016 | Core sample import operation (Line rule 9) | | UnityEditor.PackageManager.UI.Sample.FindByPackage and Import | Builds on | 6000.4 | The Package Manager has a C# route to import a sample into Assets, and the operation wraps it. The operation is not built yet. | Unity 6000.4 script reference, PackageManager.UI.Sample | | Sample.FindByPackage; Sample.Import |
 | U-017 | Spellbound window (Line rule 18) | | Package Manager | Keeps | 6000.4 | The Package Manager cannot follow a git URL from a package and cannot grey out a paid package. The window shell is built; its Package page is not. | Unity 6000.4 manual, Git dependencies (Manual/upm-git.html): a package names its own dependencies by registry version, never by git URL | | Package Manager; git URL; dependency |
 | U-018 | Core log settings inspector | `Spellbound.Core.Logging.Editor.LogConfigEditor` | UnityEditor.Editor.CreateInspectorGUI, UI Toolkit | Moved | 6000.4 | Decided 2026-10-24: the inspector was drawn with the old editor system, Unity's reference says to implement CreateInspectorGUI for a UI Toolkit inspector, and the studio sells UI Toolkit only. Rewritten 2026-10-27 as LogSettingsInspector, which implements CreateInspectorGUI. | Unity 6000.3 script reference, UnityEditor.Editor.CreateInspectorGUI; LogSettingsInspector.cs | | CreateInspectorGUI; OnInspectorGUI; IMGUI |

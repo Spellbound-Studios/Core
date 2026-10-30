@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using NUnit.Framework;
 using Spellbound.Core.Logging;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Tests.OperationFixture;
 using Spellbound.Core.Tests.OperationFixture.Second;
@@ -73,7 +74,7 @@ namespace Spellbound.Core.Tests {
             var duplicate = DynamicOperations.Assembly("Zeta.Duplicate", "fixture", null, "echo");
             var catalog = new OperationCatalog(() => new[] { Fixture, duplicate });
             var host = new OperationHost(catalog, () => UnityEngine.ScriptableObject.CreateInstance<OperationSettings>());
-            Assert.AreEqual("succeeded: hi", host.Run("fixture echo hi", OperationCaller.Development()).Result.Text);
+            Assert.AreEqual("succeeded: hi", host.Run("fixture echo hi", OperationCaller.Development(), ObservationContext.Discard).Result.Text);
             Assert.AreEqual(1, _recording.Count);
             StringAssert.Contains("declared twice", _recording.Entries[0].Message);
         }

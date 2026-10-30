@@ -3,6 +3,7 @@
 using System.Collections;
 using NUnit.Framework;
 using Spellbound.Core.Logging;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Simulation;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -32,7 +33,7 @@ namespace Spellbound.Core.PlayModeTests {
         [UnityTest]
         public IEnumerator FiftyFixedStepsGiveTwentyTicks() {
             Time.fixedDeltaTime = 0.02f;
-            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20));
+            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20), ObservationContext.Discard);
             var start = _clock.Current;
             var stepped = 0;
             _clock.Stepped += _ => stepped++;
@@ -50,7 +51,7 @@ namespace Spellbound.Core.PlayModeTests {
 
         [UnityTest]
         public IEnumerator TimeScaleZeroStopsTheDefaultSource() {
-            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20));
+            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20), ObservationContext.Discard);
             yield return new WaitForFixedUpdate();
             var start = _clock.Current;
             Time.timeScale = 0;
@@ -68,7 +69,7 @@ namespace Spellbound.Core.PlayModeTests {
 
         [UnityTest]
         public IEnumerator StopClockLeavesNoDriverAlive() {
-            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20));
+            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20), ObservationContext.Discard);
             yield return null;
             Assert.AreEqual(1, LiveAdvanceSteps());
 
@@ -82,7 +83,7 @@ namespace Spellbound.Core.PlayModeTests {
         [UnityTest]
         public IEnumerator IFixedStepTickSource_CustomImplementation() {
             var source = new StepCountingTickSource(TickRate.PerSecond(20));
-            _clock = CoreKit.Time.StartClock(source);
+            _clock = CoreKit.Time.StartClock(source, ObservationContext.Discard);
             var start = _clock.Current;
 
             for (var step = 0; step < 10; step++) {

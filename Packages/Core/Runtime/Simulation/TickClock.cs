@@ -2,13 +2,17 @@
 
 using System;
 using Spellbound.Core.Logging;
+using Spellbound.Core.Observations;
 
 namespace Spellbound.Core.Simulation {
     public sealed class TickClock {
+        private readonly ObservationContext _observations;
         private TickRate _lastSourceRate;
+        private bool _rateChangeLogged;
 
-        public TickClock(ITickSource source) {
+        public TickClock(ITickSource source, ObservationContext observations) {
             Source = source ?? throw new ArgumentNullException(nameof(source));
+            _observations = observations ?? throw new ArgumentNullException(nameof(observations));
             Rate = source.Rate;
 
             if (!(Rate.TicksPerSecond > 0)) {
@@ -25,11 +29,9 @@ namespace Spellbound.Core.Simulation {
 
         public TickRate Rate { get; }
 
+        public ObservationContext Observations => _observations;
+
         public Tick Current { get; private set; }
-
-        public ulong HeldSteps { get; private set; }
-
-        public int RateChanges { get; private set; }
 
         public double ElapsedSeconds => Rate.ToSeconds(new TickSpan(Current.Value));
 
@@ -40,9 +42,14 @@ namespace Spellbound.Core.Simulation {
 
             if (sourceRate != _lastSourceRate) {
                 _lastSourceRate = sourceRate;
-                RateChanges++;
 
-                if (RateChanges == 1) {
+                if (!_observations.IsDiscard) {
+                    CoreObservations.ClockRateChanged.Add(_observations,
+                        CoreKit.Observations.Reason(sourceRate.ToString()));
+                }
+
+                if (!_rateChangeLogged) {
+                    _rateChangeLogged = true;
                     Log.Error("The tick source changed its rate from " + Rate + " to " + sourceRate
                         + "; the clock keeps " + Rate + ".");
                 }
@@ -56,7 +63,7 @@ namespace Spellbound.Core.Simulation {
             }
 
             if (answer < Current) {
-                HeldSteps++;
+                CoreObservations.ClockHeld.Add(_observations);
             }
 
             return false;
