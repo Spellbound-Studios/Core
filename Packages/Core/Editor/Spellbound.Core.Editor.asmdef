@@ -1,0 +1,19 @@
+{
+    "name": "Spellbound.Core.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c14a5db03514b8d4ba10b621ed3627d5",
+        "Spellbound.Core.WorldObjects"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

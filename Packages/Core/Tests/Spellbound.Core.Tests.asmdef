@@ -1,0 +1,43 @@
+{
+    "name": "Spellbound.Core.Tests",
+    "rootNamespace": "",
+    "references": [
+        "Spellbound.Core",
+        "Spellbound.Core.WorldObjects",
+        "Spellbound.Core.Console",
+        "Spellbound.Core.Editor",
+        "Spellbound.Fixture.Other",
+        "Spellbound.Core.Tests.OperationFixture",
+        "Spellbound.Core.Tests.OperationFixture.Second",
+        "Spellbound.Core.Tests.AuthoringFixture",
+        "Spellbound.Core.Testing",
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Entities",
+        "Unity.Mathematics",
+        "Unity.Transforms",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.burst",
+            "expression": "[1.8.0,3.0.0)",
+            "define": "SPELLBOUND_CORE_TESTS_BURST"
+        }
+    ],
+    "noEngineReferences": false
+}
