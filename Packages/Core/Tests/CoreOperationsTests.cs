@@ -2,6 +2,7 @@
 
 using System.Reflection;
 using NUnit.Framework;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Tests.OperationFixture;
 using UnityEngine;
@@ -20,7 +21,7 @@ namespace Spellbound.Core.Tests {
             _developer = OperationCaller.Development();
         }
 
-        private string Text(string line) => _host.Run(line, _developer).Result.Text;
+        private string Text(string line) => _host.Run(line, _developer, ObservationContext.Discard).Result.Text;
 
         [Test]
         public void HelpListsTheGroups() {
@@ -56,14 +57,14 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void HelpIsOpenToAnyone() {
-            Assert.IsTrue(_host.Run("core help", new OperationCaller("player")).Result.Succeeded);
+            Assert.IsTrue(_host.Run("core help", new OperationCaller("player"), ObservationContext.Discard).Result.Succeeded);
         }
 
         [Test]
         public void AboutNamesUnityThePipelineAndTheGroups() {
             var text = Text("core about");
             StringAssert.StartsWith("succeeded: Unity " + Application.unityVersion + ", editor, not playing\nrender pipeline: ", text);
-            StringAssert.Contains("\ncore: 4 operations in Spellbound.Core", text);
+            StringAssert.Contains("\ncore: 6 operations in Spellbound.Core", text);
             StringAssert.Contains("\nfixture: ", text);
         }
 
@@ -92,7 +93,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void TheFrontDoorIsOneHostThatRunsCoreHelp() {
-            var run = CoreKit.Operations.Run("core help", OperationCaller.Development());
+            var run = CoreKit.Operations.Run("core help", OperationCaller.Development(), ObservationContext.Discard);
             Assert.IsTrue(run.IsDone);
             Assert.IsTrue(run.Result.Succeeded);
             Assert.AreSame(CoreKit.Operations, CoreKit.Operations);

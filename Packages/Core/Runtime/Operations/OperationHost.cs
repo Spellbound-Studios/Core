@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Spellbound.Core.Logging;
+using Spellbound.Core.Observations;
 using UnityEngine;
 
 namespace Spellbound.Core.Operations {
@@ -16,6 +17,8 @@ namespace Spellbound.Core.Operations {
         private readonly Func<OperationSettings> _settingsLoader;
         private readonly List<OperationHistoryEntry> _history = new List<OperationHistoryEntry>();
         private readonly Dictionary<string, OperationStatistic> _statistics = new Dictionary<string, OperationStatistic>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, OperationGroupObservations> _groupObservations =
+            new Dictionary<string, OperationGroupObservations>(StringComparer.OrdinalIgnoreCase);
         private OperationSettings _settings;
 
         public OperationCatalog Catalog { get; }
@@ -43,30 +46,41 @@ namespace Spellbound.Core.Operations {
             Parsers = new ArgumentParserRegistry(Catalog.MarkedAssemblies);
             Renderers = new ResultRendererRegistry(Catalog.MarkedAssemblies);
             _settingsLoader = settingsLoader;
+
+            foreach (var group in Catalog.Groups) {
+                GroupObservations(group.Name);
+            }
         }
 
-        public OperationRun Run(string line, OperationCaller caller) {
-            return Run(line, caller, null);
+        public OperationRun Run(string line, OperationCaller caller, ObservationContext observations) {
+            return Run(line, caller, null, observations);
         }
 
-        public OperationRun Run(string line, OperationCaller caller, IReadOnlyDictionary<string, string> placeholders) {
+        public OperationRun Run(string line, OperationCaller caller, IReadOnlyDictionary<string, string> placeholders,
+            ObservationContext observations) {
             if (caller == null) {
                 throw new ArgumentNullException(nameof(caller));
+            }
+
+            if (observations == null) {
+                throw new ArgumentNullException(nameof(observations));
             }
 
             var run = new OperationRun();
             var text = line ?? string.Empty;
 
             if (!TryPrepare(text, placeholders, out var description, out var bound, out var failure)) {
-                Finish(run, text, caller, failure, null, null);
+                Finish(run, text, caller, observations, failure, null, null);
                 return run;
             }
 
-            Execute(run, description, bound.Values, text, caller, bound.Confirmed, bound.DryRun, CancellationToken.None);
+            Execute(run, description, bound.Values, text, caller, observations, bound.Confirmed, bound.DryRun,
+                CancellationToken.None);
             return run;
         }
 
-        public OperationRun Run(OperationInvocation invocation, OperationCaller caller) {
+        public OperationRun Run(OperationInvocation invocation, OperationCaller caller,
+            ObservationContext observations) {
             if (invocation == null) {
                 throw new ArgumentNullException(nameof(invocation));
             }
@@ -75,33 +89,45 @@ namespace Spellbound.Core.Operations {
                 throw new ArgumentNullException(nameof(caller));
             }
 
+            if (observations == null) {
+                throw new ArgumentNullException(nameof(observations));
+            }
+
             var run = new OperationRun();
             var description = Catalog.Describe(invocation.Identifier);
             var text = invocation.Line ?? ("#" + invocation.Identifier);
 
             if (description == null) {
-                Finish(run, text, caller, OperationResult.Invalid("no operation has the identifier " + invocation.Identifier), null, null);
+                Finish(run, text, caller, observations,
+                    OperationResult.Invalid("no operation has the identifier " + invocation.Identifier),
+                    null, null);
                 return run;
             }
 
             if (!ArgumentBinder.TryBindValues(description, invocation.Values, out var values, out var error)) {
-                Finish(run, text, caller, OperationResult.Invalid(error), description, null);
+                Finish(run, text, caller, observations, OperationResult.Invalid(error), description, null);
                 return run;
             }
 
-            Execute(run, description, values, invocation.Line ?? description.Line, caller, invocation.Confirmed, invocation.DryRun,
-                CancellationToken.None);
+            Execute(run, description, values, invocation.Line ?? description.Line, caller, observations,
+                invocation.Confirmed,
+                invocation.DryRun, CancellationToken.None);
             return run;
         }
 
-        public OperationRun RunAll(IReadOnlyList<string> lines, OperationCaller caller) {
-            return RunAll(lines, caller, null);
+        public OperationRun RunAll(IReadOnlyList<string> lines, OperationCaller caller,
+            ObservationContext observations) {
+            return RunAll(lines, caller, null, observations);
         }
 
         public OperationRun RunAll(IReadOnlyList<string> lines, OperationCaller caller,
-            IReadOnlyDictionary<string, string> placeholders) {
+            IReadOnlyDictionary<string, string> placeholders, ObservationContext observations) {
             if (lines == null) {
                 throw new ArgumentNullException(nameof(lines));
+            }
+
+            if (observations == null) {
+                throw new ArgumentNullException(nameof(observations));
             }
 
             var chain = new OperationRun();
@@ -111,7 +137,7 @@ namespace Spellbound.Core.Operations {
                 return chain;
             }
 
-            RunFrom(chain, lines, 0, caller, placeholders);
+            RunFrom(chain, lines, 0, caller, placeholders, observations);
             return chain;
         }
 
@@ -124,8 +150,8 @@ namespace Spellbound.Core.Operations {
         }
 
         private void RunFrom(OperationRun chain, IReadOnlyList<string> lines, int index, OperationCaller caller,
-            IReadOnlyDictionary<string, string> placeholders) {
-            var run = Run(lines[index], caller, placeholders);
+            IReadOnlyDictionary<string, string> placeholders, ObservationContext observations) {
+            var run = Run(lines[index], caller, placeholders, observations);
 
             run.WhenDone(result => {
                 foreach (var line in run.Lines) {
@@ -138,7 +164,7 @@ namespace Spellbound.Core.Operations {
                 }
 
                 chain.Append(result);
-                RunFrom(chain, lines, index + 1, caller, placeholders);
+                RunFrom(chain, lines, index + 1, caller, placeholders, observations);
             });
         }
 
@@ -294,16 +320,16 @@ namespace Spellbound.Core.Operations {
         }
 
         private void Execute(OperationRun run, OperationDescription description, object[] values, string line, OperationCaller caller,
-            bool confirmed, bool dryRun, CancellationToken cancellationToken) {
+            ObservationContext observations, bool confirmed, bool dryRun, CancellationToken cancellationToken) {
             var watch = Stopwatch.StartNew();
             var gate = Gate(description, caller, confirmed, dryRun);
 
             if (gate != null) {
-                Finish(run, line, caller, gate, description, watch);
+                Finish(run, line, caller, observations, gate, description, watch);
                 return;
             }
 
-            var context = new OperationContext(this, run, caller, dryRun, confirmed, cancellationToken);
+            var context = new OperationContext(this, run, caller, observations, dryRun, confirmed, cancellationToken);
             var arguments = new object[values.Length + (description.ContextParameterIndex >= 0 ? 1 : 0)];
             var valueIndex = 0;
 
@@ -317,24 +343,25 @@ namespace Spellbound.Core.Operations {
                 returned = description.Method.Invoke(description.Instance, arguments);
             }
             catch (TargetInvocationException exception) {
-                Finish(run, line, caller, FromException(exception.InnerException ?? exception, description), description, watch);
+                var inner = exception.InnerException ?? exception;
+                Finish(run, line, caller, observations, FromException(inner, description), description, watch);
                 return;
             }
             catch (Exception exception) {
-                Finish(run, line, caller, FromException(exception, description), description, watch);
+                Finish(run, line, caller, observations, FromException(exception, description), description, watch);
                 return;
             }
 
             if (returned is Task task) {
-                AwaitTask(run, task, description, line, caller, dryRun, watch);
+                AwaitTask(run, task, description, line, caller, observations, dryRun, watch);
                 return;
             }
 
-            Finish(run, line, caller, Render(returned, description, dryRun), description, watch);
+            Finish(run, line, caller, observations, Render(returned, description, dryRun), description, watch);
         }
 
         private void AwaitTask(OperationRun run, Task task, OperationDescription description, string line, OperationCaller caller,
-            bool dryRun, Stopwatch watch) {
+            ObservationContext observations, bool dryRun, Stopwatch watch) {
             var scheduler = SynchronizationContext.Current != null
                 ? TaskScheduler.FromCurrentSynchronizationContext()
                 : TaskScheduler.Default;
@@ -342,12 +369,13 @@ namespace Spellbound.Core.Operations {
             task.ContinueWith(completed => {
                 if (completed.IsFaulted) {
                     var inner = completed.Exception?.InnerException ?? completed.Exception;
-                    Finish(run, line, caller, FromException(inner, description), description, watch);
+                    Finish(run, line, caller, observations, FromException(inner, description), description, watch);
                     return;
                 }
 
                 if (completed.IsCanceled) {
-                    Finish(run, line, caller, OperationResult.Failed(description.Line + " was cancelled"), description, watch);
+                    Finish(run, line, caller, observations, OperationResult.Failed(description.Line + " was cancelled"),
+                        description, watch);
                     return;
                 }
 
@@ -362,7 +390,7 @@ namespace Spellbound.Core.Operations {
                     }
                 }
 
-                Finish(run, line, caller, Render(value, description, dryRun), description, watch);
+                Finish(run, line, caller, observations, Render(value, description, dryRun), description, watch);
             }, CancellationToken.None, TaskContinuationOptions.None, scheduler);
         }
 
@@ -450,13 +478,16 @@ namespace Spellbound.Core.Operations {
             return OperationResult.Failed(description.Line + " threw " + exception.GetType().Name + ": " + exception.Message);
         }
 
-        private void Finish(OperationRun run, string line, OperationCaller caller, OperationResult result, OperationDescription description,
-            Stopwatch watch) {
-            Record(line, caller, result, description, watch);
+        private void Finish(OperationRun run, string line, OperationCaller caller, ObservationContext observations,
+            OperationResult result,
+            OperationDescription description, Stopwatch watch) {
+            Record(line, caller, observations, result, description, watch);
             run.Complete(result);
         }
 
-        private void Record(string line, OperationCaller caller, OperationResult result, OperationDescription description, Stopwatch watch) {
+        private void Record(string line, OperationCaller caller, ObservationContext observations,
+            OperationResult result,
+            OperationDescription description, Stopwatch watch) {
             var settings = Settings;
 
             if (settings.maximumHistoryEntries > 0) {
@@ -481,11 +512,23 @@ namespace Spellbound.Core.Operations {
                 if (!result.Succeeded) {
                     statistic.Failures++;
                 }
+
+                GroupObservations(description.Group)?.Record(observations, description, elapsed, result.Succeeded);
             }
 
             if (settings.trace) {
                 Log.Emit(LogLevel.Info, caller.Name + " ran '" + line + "': " + result.Text, TraceSource, nameof(Run), 0);
             }
+        }
+
+        private OperationGroupObservations GroupObservations(string group) {
+            if (_groupObservations.TryGetValue(group, out var observations)) {
+                return observations;
+            }
+
+            observations = OperationGroupObservations.Declare(group);
+            _groupObservations[group] = observations;
+            return observations;
         }
 
         private static int FrameCount() {

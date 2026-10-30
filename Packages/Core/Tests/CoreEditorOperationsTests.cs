@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Operations.Editor;
 using Spellbound.Core.Tests.OperationFixture;
@@ -23,7 +24,7 @@ namespace Spellbound.Core.Tests {
             _developer = OperationCaller.Development();
         }
 
-        private string Text(string line) => _host.Run(line, _developer).Result.Text;
+        private string Text(string line) => _host.Run(line, _developer, ObservationContext.Discard).Result.Text;
 
         [Test]
         public void TheEditorAssemblyJoinsTheCoreGroup() {
@@ -73,7 +74,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void ContextIsOpenToAnyone() {
-            Assert.IsTrue(_host.Run("core context", new OperationCaller("player")).Result.Succeeded);
+            Assert.IsTrue(_host.Run("core context", new OperationCaller("player"), ObservationContext.Discard).Result.Succeeded);
         }
 
         [Test]

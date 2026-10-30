@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using UnityEngine;
 
@@ -113,8 +114,17 @@ namespace Spellbound.Core.Tests.OperationFixture {
         [Operation("camel-case-name", "Has a camel case parameter.", OperationEffect.Reads)]
         public static string CamelCaseName([Argument("A camel case parameter.")] int maxHitPoints) => maxHitPoints.ToString();
 
+        [Operation("observe", "Remembers the observation context the run was given.", OperationEffect.Reads)]
+        public static string Observe(OperationContext context) {
+            LastObservations = context.Observations;
+            return "observed " + context.Observations.Name;
+        }
+
+        public static ObservationContext LastObservations { get; private set; }
+
         public static void Reset() {
             WipeCount = 0;
+            LastObservations = null;
         }
     }
 }

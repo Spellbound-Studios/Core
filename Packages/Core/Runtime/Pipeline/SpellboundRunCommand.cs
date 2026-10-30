@@ -2,6 +2,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 
 namespace Spellbound.Core.Pipeline {
@@ -13,7 +14,7 @@ namespace Spellbound.Core.Pipeline {
         public const string Tag = "spellbound";
 
         public static async Task<string> Run(string line) {
-            var run = CoreKit.Operations.Run(line, PipelineCaller.Current);
+            var run = CoreKit.Operations.Run(line, PipelineCaller.Current, ObservationContext.Discard);
             var result = await run.AsTask();
 
             switch (result.Status) {

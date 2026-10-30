@@ -24,7 +24,7 @@ public static class MatchOperations {
 Run a line from anywhere:
 
 ```csharp
-var run = CoreKit.Operations.Run("mygame gold 50", OperationCaller.Development());
+var run = CoreKit.Operations.Run("mygame gold 50", OperationCaller.Development(), ObservationContext.Discard);
 Debug.Log(run.Result.Text);
 ```
 
@@ -32,7 +32,7 @@ Debug.Log(run.Result.Text);
 - The first word of every result is its status: `succeeded`, `invalid` (the line did not parse or bind), `failed` (a valid call found a fault), `refused` (not allowed now or by this caller) or `previewed` (a dry run).
 - `OperationEffect.Destroys` is refused without `--confirm`; `--dry-run` sets `OperationContext.DryRun` and answers `previewed:`.
 - `Audience` is an open string, default `developer`; a caller holds a set of audiences and `anyone` is held by everyone. `Availability` refuses an operation outside edit or play mode with the Unity CLI command to run first.
-- A parameter of type `OperationContext` is filled by the host, never parsed: `DryRun`, `Confirmed`, `Caller`, `Host`, a cancellation token and `Report(line)` for progress.
+- A parameter of type `OperationContext` is filled by the host, never parsed: `DryRun`, `Confirmed`, `Caller`, `Host`, `Observations` (the context the run was given), a cancellation token and `Report(line)` for progress.
 - An operation that returns a `Task` or `Task<T>` completes later; `OperationRun` is a `CustomYieldInstruction` a Play Mode test can `yield return`, and `AsTask()` awaits it.
 - Teach the line a new argument type with a class marked `[ArgumentParser]` that implements `IArgumentParser<T>`; change how a returned value becomes text with `[ResultRenderer]` and `IResultRenderer`. Both are found in marked assemblies, so there is no startup call.
 - `core help`, `core help --group <name>`, `core about`, `core history` and `core stats` ship with Core.

@@ -3,6 +3,7 @@
 using System.Reflection;
 using NUnit.Framework;
 using Spellbound.Core.Authoring.Editor;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Tests.AuthoringFixture;
 using UnityEditor;
@@ -35,7 +36,7 @@ namespace Spellbound.Core.Tests {
             UnityEngine.Object.DestroyImmediate(_settings);
         }
 
-        private string Text(string line, OperationCaller caller = null) => _host.Run(line, caller ?? _developer).Result.Text;
+        private string Text(string line, OperationCaller caller = null) => _host.Run(line, caller ?? _developer, ObservationContext.Discard).Result.Text;
 
         [Test]
         public void TheFiveOperationsJoinTheCoreGroup() {
@@ -97,7 +98,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void ValidateIsOpenToAnyone() {
-            Assert.IsTrue(_host.Run("core validate --path " + _folder.Path, new OperationCaller("player")).Result.Succeeded);
+            Assert.IsTrue(_host.Run("core validate --path " + _folder.Path, new OperationCaller("player"), ObservationContext.Discard).Result.Succeeded);
         }
 
         [Test]

@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using NUnit.Framework;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.UnityLedger;
 
@@ -14,7 +15,7 @@ namespace Spellbound.Core.Tests {
             var rows = LedgerSources.All(host.Settings, problems);
             var expected = LedgerCheck.ForThisEditor().Run(rows, problems,
                 LedgerSources.SourceNames(host.Settings).Count);
-            var text = host.Run("core unity-ledger", OperationCaller.Development()).Result.Text;
+            var text = host.Run("core unity-ledger", OperationCaller.Development(), ObservationContext.Discard).Result.Text;
             var firstWord = text.Split(':')[0];
 
             Assert.AreEqual(expected.Passed ? "succeeded" : "failed", firstWord, text);

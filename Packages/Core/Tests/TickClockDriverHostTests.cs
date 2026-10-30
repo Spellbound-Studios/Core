@@ -1,6 +1,7 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
 using NUnit.Framework;
+using Spellbound.Core.Observations;
 using Spellbound.Core.Simulation;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void TheDriverHostIsHiddenAndNeverSaved() {
-            var clock = CoreKit.Time.StartClock(TickRate.PerSecond(20));
+            var clock = CoreKit.Time.StartClock(TickRate.PerSecond(20), ObservationContext.Discard);
 
             try {
                 var host = Host();
