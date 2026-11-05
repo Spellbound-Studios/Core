@@ -12,6 +12,20 @@ namespace Spellbound.Core.Observations {
             "The tick source answered a tick below the clock's current tick, so the clock held where it was"
             + " for that step.");
 
+        public static readonly Gauge IntentLedgerBytes = CoreKit.Observations.Gauge("core.intent.ledger_bytes",
+            "The bytes an intent ledger's windows hold: the actors held times the window size times twelve.",
+            ObservationUnit.Bytes);
+
+        public static readonly Counter IntentRepeats = CoreKit.Observations.Counter("core.intent.repeats",
+            "An intent was checked again after it was applied, and the ledger answered the receipt it kept.");
+
+        public static readonly Counter IntentStale = CoreKit.Observations.Counter("core.intent.stale",
+            "An intent was older than its actor's window, so the ledger refused it.");
+
+        public static readonly Counter IntentWindowsDropped = CoreKit.Observations.Counter(
+            "core.intent.windows_dropped",
+            "A departed actor's intent window was dropped once its grace had passed.");
+
         public static readonly Counter LogVerbose = CoreKit.Observations.Counter("core.log.verbose",
             "A line was logged at the Verbose level. The reason is the call site.");
 
