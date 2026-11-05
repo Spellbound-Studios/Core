@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Spellbound.Core.Intents;
 using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Packing;
@@ -132,6 +133,24 @@ namespace Spellbound.Core {
                 }
 
                 return ratios.Count;
+            }
+        }
+
+        public static class Intents {
+            public static IntentSequence Sequence(IntentActor actor) => new IntentSequence(actor);
+
+            public static IntentLedger CreateLedger(TickRate rate, ObservationContext observations) =>
+                new IntentLedger(IntentLedgerSettings.DefaultWindowSize,
+                    rate.FromSeconds(IntentLedgerSettings.DefaultDepartureGraceSeconds), observations);
+
+            public static IntentLedger CreateLedger(IntentLedgerSettings settings, TickRate rate,
+                ObservationContext observations) {
+                if (settings == null) {
+                    throw new ArgumentNullException(nameof(settings));
+                }
+
+                return new IntentLedger(settings.windowSize, rate.FromSeconds(settings.departureGraceSeconds),
+                    observations);
             }
         }
 
