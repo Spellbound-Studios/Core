@@ -157,20 +157,7 @@ namespace Spellbound.Core.Console {
             if (AttributeCommandRegistry.HasUtilityCommand(commandName))
                 return AttributeCommandRegistry.ExecuteUtilityCommand(commandName, args);
 
-            // Check if it's a known preset command
-            if (!AttributeCommandRegistry.HasPresetCommand(commandName))
-                return CommandResult.Fail($"Unknown command: '{commandName}'\nType 'help' for available commands.");
-
-            // Preset commands require a target
-            if (args.Length == 0) {
-                return CommandResult.Fail(
-                    $"Command '{commandName}' requires a target.\nUsage: {commandName} <target> [quantity]");
-            }
-
-            var targetName = args[0];
-            var remainingArgs = args.Skip(1).ToArray();
-
-            return ConsoleCommandRouter.RouteCommand(commandName, targetName, remainingArgs);
+            return CommandResult.Fail($"Unknown command: '{commandName}'\nType 'help' for available commands.");
         }
 
         /// <summary>

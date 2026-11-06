@@ -7,7 +7,6 @@ using UnityEngine;
 namespace Spellbound.Core.Console {
     /// <summary>
     /// Utility for parsing console command arguments into typed parameters.
-    /// Used internally by PresetCommandRegistry for both preset and utility commands.
     /// </summary>
     internal static class CommandParameterParser {
         /// <summary>

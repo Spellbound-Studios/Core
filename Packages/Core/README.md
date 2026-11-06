@@ -43,14 +43,19 @@ Debug.Log(run.Result.Text);
 
 ---
 
+## Viewers
+
+`Spellbound.Core.Viewers` holds the viewers a world wakes things around. A `ViewerRegistry` is made per world instance and holds nothing static; each `Viewer` carries its `ViewerId`, its position, its collision radius and its detail radius. `Add(position, collisionRadius, detailRadius)` issues ids from 1 in each registry and never reuses one; `Move(id, position)` and `Update(id, position, collisionRadius, detailRadius)` answer false for an unknown id, and `Remove(id)` answers false the second time. A radius below zero or not finite, or a position with a component that is not finite, throws `ArgumentOutOfRangeException`. `Viewers` is a span over the registry's packed array and reads without allocating; its order is not the order of adding, and a span taken before an `Add` or a `Remove` is no longer valid. `Read(list)` fills a caller-owned list. `Added`, `Moved` (raised by `Move` and by `Update`) and `Removed` each pass the viewer as `in Viewer`. A viewer crossing worlds is removed from one registry and then added to the other.
+
+---
+
 ## Console Overview
 
-The Spellbound Console System provides a powerful command-line interface for Unity games. It supports three types of
+The Spellbound Console System provides a powerful command-line interface for Unity games. It supports two types of
 commands:
 
-1. **ICommand Classes** - Self-contained command implementations (e.g., `help`, `clear`, `list`)
+1. **ICommand Classes** - Self-contained command implementations (e.g., `help`, `clear`)
 2. **Utility Commands** - Static methods that can be called directly (e.g., `terraform_flatten`)
-3. **Preset Commands** - Methods that operate on ObjectPresets with specific modules (e.g., `spawn sword`)
 
 ### Key Features
 
@@ -90,7 +95,6 @@ Open the console and try:
 
 ```
 > help
-> list
 > clear
 ```
 
@@ -102,7 +106,7 @@ Open the console and try:
 
 Best for: Standalone utility commands that don't need external context.
 
-**Examples:** `help`, `clear`, `list`, custom help commands
+**Examples:** `help`, `clear`, custom help commands
 
 **Characteristics:**
 
@@ -121,21 +125,7 @@ Best for: Static helper methods, debug utilities, system commands.
 
 - Must be static methods
 - Decorated with `[ConsoleUtilityCommand]`
-- No preset/target required
 - Called directly: `commandname arg1 arg2`
-
-### Preset Commands
-
-Best for: Commands that operate on game objects/presets.
-
-**Examples:** `spawn`, `delete`, `modify`
-
-**Characteristics:**
-
-- Can be static or instance methods
-- Decorated with `[ConsolePresetCommand]`
-- Require a preset target: `commandname targetname [args]`
-- Only called if preset has required module type
 
 ---
 
@@ -211,47 +201,6 @@ public static class MyUtilities {
 > timescale          (uses default: 1)
 ```
 
-### Creating a Preset Command
-
-```csharp
-using Spellbound.Core.Console;
-using UnityEngine;
-
-public class GameObjectSpawner : MonoBehaviour {
-    
-    [ConsolePresetCommand("spawn", typeof(ConsoleModule))]
-    public void SpawnObject(string presetUid, Vector3 position, Quaternion rotation, float scale) {
-        var preset = presetUid.ResolvePreset();
-        
-        // Your spawn logic here
-        var obj = Instantiate(preset.prefab, position, rotation);
-        obj.transform.localScale = Vector3.one * scale;
-        
-        Debug.Log($"Spawned {preset.objectName} at {position}");
-    }
-
-    [ConsolePresetCommand("delete", typeof(ConsoleModule))]
-    public void DeleteObject(string presetUid) {
-        // Your delete logic here
-        Debug.Log($"Deleted {presetUid}");
-    }
-}
-```
-
-**Setup:**
-
-1. Your ObjectPreset must have a `ConsoleModule` attached
-2. Set `autoRegister = true` on the ConsoleModule
-3. Place the preset in a Resources folder
-
-**Usage in console:**
-
-```
-> spawn sword
-> spawn sword 5     (spawns 5 swords)
-> delete sword
-```
-
 ### Creating a Custom Help Command
 
 ```csharp
@@ -294,20 +243,7 @@ CommandRegistry
 
 AttributeCommandRegistry
 ├── Discovers methods with [ConsoleUtilityCommand]
-├── Discovers methods with [ConsolePresetCommand]
-├── Handles method invocation and parameter parsing
-└── Caches method instances
-
-PresetResolver
-├── Maps preset names to UIDs
-├── Scans Resources for ObjectPresets with ConsoleModule
-└── Provides TryResolvePresetUid()
-
-ConsoleCommandRouter
-├── Routes preset commands to handler methods
-├── Checks module type requirements
-├── Handles quantity multiplier
-└── Provides execution context (position, rotation, etc.)
+└── Handles method invocation and parameter parsing
 
 ConsoleController
 ├── UI management
@@ -319,7 +255,7 @@ ConsoleController
 ### Command Flow
 
 ```
-User Input: "spawn sword 5"
+User Input: "timescale 0.5"
      ↓
 ConsoleController.ExecuteCommand()
      ↓
@@ -327,17 +263,9 @@ CommandRegistry.ExecuteCommand()
      ↓
 [Checks ICommand] → Not found
      ↓
-[Checks Utility Command] → Not found
+[Checks Utility Command] → Found!
      ↓
-[Checks Preset Command] → Found!
-     ↓
-ConsoleCommandRouter.RouteCommand()
-     ↓
-PresetResolver.TryResolvePresetUid("sword")
-     ↓
-AttributeCommandRegistry.TryGetPresetHandler("spawn", typeof(ConsoleModule))
-     ↓
-Invokes method 5 times
+AttributeCommandRegistry.ExecuteUtilityCommand("timescale", ["0.5"])
      ↓
 Returns success
 ```
@@ -385,26 +313,6 @@ var commands = AttributeCommandRegistry.GetUtilityCommandsByClassName("MyClass")
 
 // Check if utility command exists
 bool exists = AttributeCommandRegistry.HasUtilityCommand("mycommand");
-
-// Check if preset command exists
-bool exists = AttributeCommandRegistry.HasPresetCommand("spawn");
-```
-
-### PresetResolver
-
-Query registered presets.
-
-```csharp
-// Resolve preset name to UID
-if (PresetResolver.TryResolvePresetUid("sword", out string uid)) {
-    var preset = uid.ResolvePreset();
-}
-
-// Get all preset names
-var names = PresetResolver.GetAllPresetNames();
-
-// Get count
-int count = PresetResolver.GetPresetCount();
 ```
 
 ---
@@ -413,7 +321,7 @@ int count = PresetResolver.GetPresetCount();
 
 ### Parameter Types Supported
 
-Utility and preset commands automatically parse these types:
+Utility commands automatically parse these types:
 
 - `string`
 - `int`
@@ -447,20 +355,6 @@ Methods can use default parameter values:
 public static void ApplyDamage(float amount, string damageType = "physical") {
     // damage 50         → amount=50, damageType="physical"
     // damage 50 fire    → amount=50, damageType="fire"
-}
-```
-
-### Preset Command Context
-
-Preset commands receive context from the system:
-
-```csharp
-[ConsolePresetCommand("spawn", typeof(ConsoleModule))]
-public void SpawnObject(string presetUid, Vector3 position, Quaternion rotation, float scale) {
-    // presetUid - automatically provided
-    // position  - from crosshair raycast (configurable via ConsoleModule.spawnLocation)
-    // rotation  - Quaternion.identity
-    // scale     - 1.0f
 }
 ```
 
@@ -526,7 +420,6 @@ if (result.Success) {
 
 - **ICommand** for standalone utilities (help, clear, stats display)
 - **Utility Commands** for static helper methods (debug toggles, system commands)
-- **Preset Commands** for object manipulation (spawn, delete, modify)
 
 ### 2. Provide Good Descriptions
 
@@ -541,11 +434,11 @@ if (result.Success) {
 ### 3. Use Default Parameters for Optional Args
 
 ```csharp
-// ✅ Good - allows: spawn sword  OR  spawn sword 5
-public void Spawn(string presetUid, int quantity = 1)
+// ✅ Good - allows: timescale  OR  timescale 0.5
+public static void SetTimeScale(float scale = 1f)
 
-// ❌ Bad - always requires quantity
-public void Spawn(string presetUid, int quantity)
+// ❌ Bad - always requires scale
+public static void SetTimeScale(float scale)
 ```
 
 ### 4. Validate Input
@@ -590,15 +483,6 @@ public class AudioHelpCommand : ICommand {
 
 **Problem:** Utility command not found  
 **Solution:** Ensure method is `static` and has `[ConsoleUtilityCommand]` attribute
-
-### "No handler found" for preset commands
-
-**Problem:** Preset command not routing  
-**Solution:**
-
-1. Check preset has `ConsoleModule` with `autoRegister = true`
-2. Verify preset is in a Resources folder
-3. Ensure method has `[ConsolePresetCommand]` with correct module type
 
 ### Commands not auto-registering
 

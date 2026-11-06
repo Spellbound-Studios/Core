@@ -9,16 +9,10 @@ using UnityEngine;
 
 namespace Spellbound.Core.Console {
     /// <summary>
-    /// Discovers and stores all methods marked with [ConsolePresetCommand] and [ConsoleUtilityCommand].
+    /// Discovers and stores all methods marked with [ConsoleUtilityCommand].
     /// Enables routing console commands to the appropriate game system methods.
     /// </summary>
     public static class AttributeCommandRegistry {
-        /// <summary>
-        /// Preset command handlers indexed by (commandName, moduleType).
-        /// </summary>
-        private static readonly Dictionary<(string commandName, Type moduleType), MethodCommandInfo> PresetHandlers =
-                new();
-
         /// <summary>
         /// Utility command handlers indexed by commandName only.
         /// </summary>
@@ -30,18 +24,13 @@ namespace Spellbound.Core.Console {
         /// </summary>
         private static readonly HashSet<string> AllCommandNames = new(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>
-        /// Cached object instances that own the registered methods.
-        /// </summary>
-        private static readonly Dictionary<MethodInfo, object> MethodInstances = new();
-
         private static bool _isInitialized;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetForPlaySession() => Clear();
 
         /// <summary>
-        /// Initializes the method registry by scanning all assemblies for [ConsolePresetCommand] and [ConsoleUtilityCommand].
+        /// Initializes the method registry by scanning all assemblies for [ConsoleUtilityCommand].
         /// </summary>
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Initialize() {
@@ -53,11 +42,10 @@ namespace Spellbound.Core.Console {
         }
 
         /// <summary>
-        /// Scans all loaded assemblies for methods with the [ConsolePresetCommand] attribute.
+        /// Scans all loaded assemblies for methods with the [ConsoleUtilityCommand] attribute.
         /// </summary>
         private static void DiscoverAllMethods() {
             var assemblies = CommandRegistryUtilities.GetScannableAssemblies();
-            var presetCount = 0;
             var utilityCount = 0;
 
             foreach (var assembly in assemblies) {
@@ -69,20 +57,6 @@ namespace Spellbound.Core.Console {
                                                       BindingFlags.Instance | BindingFlags.Static);
 
                         foreach (var method in methods) {
-                            // Check for preset command
-                            var presetAttr = method.GetCustomAttribute<ConsolePresetCommandAttribute>();
-
-                            if (presetAttr != null) {
-                                var commandInfo = CreateCommandInfo(method, presetAttr.CommandName, null,
-                                    presetAttr.RequiredModuleType);
-
-                                if (RegisterPresetCommand(commandInfo, presetAttr))
-                                    presetCount++;
-
-                                continue;
-                            }
-
-                            // Check for utility command
                             var utilityAttr = method.GetCustomAttribute<ConsoleUtilityCommandAttribute>();
 
                             if (utilityAttr == null)
@@ -90,7 +64,7 @@ namespace Spellbound.Core.Console {
 
                             {
                                 var commandInfo = CreateCommandInfo(method, utilityAttr.CommandName,
-                                    utilityAttr.Description, null);
+                                    utilityAttr.Description);
 
                                 if (RegisterUtilityCommand(commandInfo, utilityAttr))
                                     utilityCount++;
@@ -104,7 +78,6 @@ namespace Spellbound.Core.Console {
             }
 
             CommandRegistryUtilities.LogDiscoverySummary("AttributeCommandRegistry",
-                ("preset command(s)", presetCount),
                 ("utility command(s)", utilityCount));
         }
 
@@ -112,45 +85,12 @@ namespace Spellbound.Core.Console {
         /// Creates a unified MethodCommandInfo from method metadata.
         /// </summary>
         private static MethodCommandInfo CreateCommandInfo(
-            MethodInfo method, string commandName, string description, Type requiredModuleType) =>
+            MethodInfo method, string commandName, string description) =>
                 new() {
                     Method = method,
                     DeclaringClass = method.DeclaringType,
-                    Description = description ?? $"Executes {commandName}",
-                    RequiredModuleType = requiredModuleType
+                    Description = description ?? $"Executes {commandName}"
                 };
-
-        /// <summary>
-        /// Private method that will register any preset commands that have been added.
-        /// </summary>
-        private static bool RegisterPresetCommand(MethodCommandInfo commandInfo, ConsolePresetCommandAttribute attr) {
-            var commandName = CommandRegistryUtilities.NormalizeCommandName(attr.CommandName);
-
-            if (commandName == null) {
-                Debug.LogError(
-                    $"[AttributeCommandRegistry] Invalid command name for {commandInfo.DeclaringClass?.Name}.{commandInfo.Method.Name}");
-
-                return false;
-            }
-
-            // Check for duplicates but allow the same name with different modules.
-            var key = (commandName, attr.RequiredModuleType);
-
-            if (!PresetHandlers.TryAdd(key, commandInfo)) {
-                Debug.LogWarning(
-                    $"[AttributeCommandRegistry] Duplicate preset handler for '{commandName}' with module {attr.RequiredModuleType.Name}");
-
-                return false;
-            }
-
-            AllCommandNames.Add(commandName);
-
-            CommandRegistryUtilities.LogCommandRegistered(
-                commandName,
-                $"{commandInfo.DeclaringClass?.Name}.{commandInfo.Method.Name} [Module: {attr.RequiredModuleType.Name}]");
-
-            return true;
-        }
 
         /// <summary>
         /// Private method that will register any utility commands via an attribute that have been added.
@@ -187,51 +127,6 @@ namespace Spellbound.Core.Console {
 
             return true;
         }
-
-        #region Preset Command API
-
-        /// <summary>
-        /// Checks if a preset command with the given name is registered (for any module type).
-        /// </summary>
-        public static bool HasPresetCommand(string commandName) {
-            if (!_isInitialized)
-                Initialize();
-
-            var normalizedName = CommandRegistryUtilities.NormalizeCommandName(commandName);
-
-            return normalizedName != null &&
-                   PresetHandlers.Keys.Any(key => key.commandName == normalizedName);
-        }
-
-        /// <summary>
-        /// Attempts to find a preset command handler for the given command and module type.
-        /// </summary>
-        public static bool TryGetPresetHandler(string commandName, Type moduleType, out MethodInfo method) {
-            if (!_isInitialized)
-                Initialize();
-
-            var normalizedName = CommandRegistryUtilities.NormalizeCommandName(commandName);
-
-            if (normalizedName == null) {
-                method = null;
-
-                return false;
-            }
-
-            var key = (normalizedName, moduleType);
-
-            if (PresetHandlers.TryGetValue(key, out var commandInfo)) {
-                method = commandInfo.Method;
-
-                return true;
-            }
-
-            method = null;
-
-            return false;
-        }
-
-        #endregion
 
         #region Utility Command API
 
@@ -299,7 +194,6 @@ namespace Spellbound.Core.Console {
 
         /// <summary>
         /// Executes a method command with parsed arguments.
-        /// Unified execution logic for both preset and utility commands.
         /// </summary>
         private static CommandResult ExecuteMethodCommand(
             MethodCommandInfo commandInfo, string[] args, string commandName) {
@@ -312,13 +206,7 @@ namespace Spellbound.Core.Console {
             }
 
             try {
-                // Recall: For static methods (utility commands), the instance is null.
-                // Recall: For instance methods (preset commands), the caller resolves the instance.
-                var instance = commandInfo.Method.IsStatic
-                        ? null
-                        : GetMethodInstance(commandInfo.Method);
-
-                commandInfo.Method.Invoke(instance, parsedArgs);
+                commandInfo.Method.Invoke(null, parsedArgs);
 
                 return CommandResult.Ok($"Executed {commandName}");
             }
@@ -331,7 +219,6 @@ namespace Spellbound.Core.Console {
 
         /// <summary>
         /// Parse string arguments into typed parameters for a method.
-        /// Shared by both preset and utility commands.
         /// </summary>
         private static object[] ParseArguments(MethodInfo method, string[] args) {
             var parameters = method.GetParameters();
@@ -452,63 +339,14 @@ namespace Spellbound.Core.Console {
             return usage;
         }
 
-        /// <summary>
-        /// Gets or creates an instance for non-static methods.
-        /// Used by ConsoleCommandRouter for preset commands.
-        /// </summary>
-        public static object GetMethodInstance(MethodInfo method) {
-            if (method.IsStatic)
-                return null;
-
-            if (MethodInstances.TryGetValue(method, out var cached)) {
-                if (cached is not UnityEngine.Object unityObject || unityObject)
-                    return cached;
-
-                MethodInstances.Remove(method);
-            }
-
-            // I really dislike this right now, but I'm not sure how to improve it just yet.
-            if (typeof(MonoBehaviour).IsAssignableFrom(method.DeclaringType)) {
-                var instance = UnityEngine.Object.FindAnyObjectByType(method.DeclaringType) as MonoBehaviour;
-
-                if (instance != null) {
-                    MethodInstances[method] = instance;
-
-                    return instance;
-                }
-
-                Debug.LogError(
-                    $"[PresetCommandRegistry] No instance of {method.DeclaringType?.Name} found in scene for method {method.Name}");
-
-                return null;
-            }
-
-            try {
-                if (method.DeclaringType != null) {
-                    var instance = Activator.CreateInstance(method.DeclaringType);
-                    MethodInstances[method] = instance;
-
-                    return instance;
-                }
-            }
-            catch (Exception ex) {
-                Debug.LogError(
-                    $"[PresetCommandRegistry] Failed to create instance of {method.DeclaringType?.Name}: {ex.Message}");
-            }
-
-            return null;
-        }
-
         #endregion
 
         /// <summary>
         /// Clears all registered methods.
         /// </summary>
         public static void Clear() {
-            PresetHandlers.Clear();
             UtilityHandlers.Clear();
             AllCommandNames.Clear();
-            MethodInstances.Clear();
             _isInitialized = false;
         }
     }
