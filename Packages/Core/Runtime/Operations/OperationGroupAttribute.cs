@@ -11,10 +11,6 @@ namespace Spellbound.Core.Operations {
         public OperationGroupAttribute(string name) : this(name, null) { }
 
         public OperationGroupAttribute(string name, string job) {
-            if (string.IsNullOrWhiteSpace(name)) {
-                throw new ArgumentException("Operation group name must not be null, empty or whitespace.", nameof(name));
-            }
-
             Name = name;
             Job = job;
         }

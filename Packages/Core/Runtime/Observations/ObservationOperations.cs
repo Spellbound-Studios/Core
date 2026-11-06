@@ -137,46 +137,25 @@ namespace Spellbound.Core.Observations {
         private static bool TryResolveContext(string world, out ObservationContext observations,
             out OperationResult failure) {
             failure = null;
-            var live = ObservationContexts.All;
 
-            if (!string.IsNullOrWhiteSpace(world)) {
-                observations = ObservationContexts.Find(world.Trim());
-
-                if (observations != null) {
-                    return true;
-                }
-
-                failure = OperationResult.Invalid("no world named '" + world + "' is live" + Worlds(live));
+            if (string.IsNullOrWhiteSpace(world) && ObservationContexts.All.Count > 1) {
+                observations = null;
+                failure = OperationResult.Invalid("several worlds are live; name one with --world"
+                                                  + ObservationContexts.LiveWorldList());
                 return false;
             }
 
-            if (live.Count == 0) {
+            if (!ObservationContexts.TryResolve(world, out observations, out var unresolved)) {
                 observations = null;
-                return true;
+                failure = OperationResult.Invalid(unresolved);
+                return false;
             }
 
-            if (live.Count == 1) {
-                observations = live[0];
-                return true;
+            if (observations.IsDiscard) {
+                observations = null;
             }
 
-            observations = null;
-            failure = OperationResult.Invalid("several worlds are live; name one with --world" + Worlds(live));
-            return false;
-        }
-
-        private static string Worlds(IReadOnlyList<ObservationContext> live) {
-            if (live.Count == 0) {
-                return string.Empty;
-            }
-
-            var names = new string[live.Count];
-
-            for (var i = 0; i < live.Count; i++) {
-                names[i] = live[i].Name;
-            }
-
-            return "\nLive worlds: " + string.Join(", ", names);
+            return true;
         }
 
         private static bool Matches(ObservationKey key, string prefix) {

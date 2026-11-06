@@ -67,7 +67,7 @@ Operations of the group `core`, run as `<group> <operation> [arguments]`:
   - `--timings`: True to append a table with the milliseconds each validator and check took. Default: false.
 <!-- /spellbound:operations -->
 
-<!-- spellbound:depends 45527832 -->
+<!-- spellbound:depends 76ec41a0 -->
 Depends on:
 - `com.unity.entities` 1.3.14
 - `com.unity.entities.graphics` 1.3.14
@@ -79,10 +79,11 @@ Depends on:
 Bridges, each compiled only when its package is installed:
 - `Spellbound.Core.Pipeline` when `com.unity.pipeline` is in [0.8.0-exp.1,0.9.0-exp.1)
 - `Spellbound.Core.Pipeline` when `com.unity.pipeline` is in [0.9.0-exp.1,0.10.0-exp.1)
+- `Spellbound.Core.Pipeline` when `com.unity.pipeline` is in [0.10.0-exp.1,0.11.0-exp.1)
 <!-- /spellbound:depends -->
 
-<!-- spellbound:pipeline 916d3b95 -->
-Agents run these operation lines from the Unity command line when `com.unity.pipeline` is installed in [0.8.0-exp.1,0.9.0-exp.1) or [0.9.0-exp.1,0.10.0-exp.1): find the command with `unity command --query spellbound` and pass it one line.
+<!-- spellbound:pipeline 85aca405 -->
+Agents run these operation lines from the Unity command line when `com.unity.pipeline` is installed in [0.8.0-exp.1,0.9.0-exp.1) or [0.9.0-exp.1,0.10.0-exp.1) or [0.10.0-exp.1,0.11.0-exp.1): find the command with `unity command --query spellbound` and pass it one line.
 <!-- /spellbound:pipeline -->
 
 ## Rules
@@ -92,10 +93,12 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 - Log through `Spellbound.Core.Logging.Log`, never through `Debug.Log`.
 - Outside play mode the logger writes to the Unity console through one sink; the sinks of the `LogConfig` register when play mode starts.
 - A result's first word is its status: `succeeded`, `invalid`, `failed`, `refused` or `previewed`. A script branches on it; the prose after it is for people and agents.
-- An operation that deletes data is refused without `--confirm`; `--dry-run` answers `previewed:` and changes nothing.
+- An operation that deletes data is refused without `--confirm`. Under `--dry-run` an operation that writes or deletes runs only when it takes an `OperationContext`, and it reads `DryRun` and changes nothing; one that takes no context cannot preview and is refused as `invalid:` naming it. A reading operation runs under `--dry-run` and answers `previewed:`.
+- An `[Operation]` with an empty name or description, or one whose attribute the runtime cannot read, is skipped with one `Log.Error` line naming its type and method; the rest of the catalog loads. An `[Argument]` with an empty description skips its operation with one line naming the operation and the parameter, and an `[assembly: OperationGroup]` with an empty name, or one the runtime cannot read, skips its assembly with one line naming the assembly.
 - An operation that could outlast a domain reload is a `<name>-start` and `<name>-status` pair; an operation never opens a modal dialog.
 - Nothing per frame or per tick goes through an operation: the host reflects, parses and allocates per call.
 - `OperationSettings` is optional. Every field has a default, so no asset is required; the field `bridgeAudiences` is the one setting that grants the audience `approver` to an agent on the Unity command line.
+- A line run on the Unity command line records its observations into the one live world, or into the live world `--world` names; with several live and none named it records nowhere, and a `--world` that is not live is refused as `invalid:` with the live worlds listed. `ObservationContexts.TryResolve` resolves a name to its live world, or no name to the one live world, and otherwise answers `ObservationContext.Discard`; a door that refuses several live worlds checks `ObservationContexts.All.Count` first, as `core observation` does.
 - `core approve` needs the audience `approver` and is refused while the draft has an error finding; a draft lives in `OperationSettings.draftsFolder` (default `Assets/Drafts`) and every path an authoring operation writes is under `Assets` or `Library/Spellbound`.
 - An observation key is declared once, by one package, as an immutable static field of a class that holds only declarations (`<Package>Observations`), with a required description; a second declaration of a key with another kind or description throws at static initialisation. `Declared()` finds such classes in every assembly that references Core and runs their static constructors, so a class that mixes a declaration with other static state is not scanned. A context is read and written on the main thread; `CallSiteLogSink` drops a line emitted from another thread and counts the drop in `DroppedOffThread`.
 - A reading's `Value`, `Total` and `Peak` follow the kind: a counter's value is its running total and its peak the largest single add; an occurrence's value is its count; a gauge's value is the last set and its peak the highest; a cost's value is the last amount, its total the sum and its peak the largest amount. `Count` is the number of reports in every kind.
@@ -115,6 +118,7 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 - A line captured from Unity's own log (`UnityLogCapture`) reaches `CallSiteLogSink` with the source `Unity`, the log type as its member and line 0, so every `Debug.Log` from anywhere counts under one call site per log type.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
 - The Spellbound window holds no page of Core's own yet: the Line, Package, Operations and Drafts pages are not built.
+- `core context-install` writes and takes no `OperationContext`, so it cannot preview and is refused under `--dry-run`.
 
 ## Ledger
 

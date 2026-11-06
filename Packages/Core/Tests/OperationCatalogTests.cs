@@ -70,6 +70,139 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void AnOperationWithABlankNameOrDescriptionIsSkippedWithOneLineEach() {
+            var faulty = DynamicOperations.Assembly("Zeta.Faulty", "fixture", null,
+                new DynamicOperation("BlankName", " ", "An operation with no name."),
+                new DynamicOperation("BlankDescription", "blank-description", ""),
+                new DynamicOperation("Sound", "sound", "An operation declared beside two faulty ones."));
+            var catalog = new OperationCatalog(() => new[] { Fixture, faulty, Core });
+            Assert.IsNotNull(catalog.Describe("fixture", "sound"));
+            Assert.IsNull(catalog.Describe("fixture", "blank-description"));
+            Assert.IsNotNull(catalog.Describe("fixture", "echo"));
+            Assert.IsNotNull(catalog.Describe("core", "help"));
+            Assert.AreEqual(2, _recording.CountOf(LogLevel.Error));
+            Assert.AreEqual(2, _recording.Count);
+            Assert.AreEqual("Operation on Zeta.Faulty.Operations.BlankName has an empty name and was skipped.",
+                _recording.Entries[0].Message);
+            Assert.AreEqual("Operation on Zeta.Faulty.Operations.BlankDescription has an empty description and was"
+                            + " skipped.", _recording.Entries[1].Message);
+        }
+
+        [Test]
+        public void HelpCountsOnlyTheSoundOperationsBesideFaultyOnes() {
+            var sound = new OperationCatalog(() => new[] { Fixture }).Group("fixture").Operations.Count;
+            var faulty = DynamicOperations.Assembly("Zeta.FaultyHelp", "fixture", null,
+                new DynamicOperation("BlankName", "", "An operation with no name."),
+                new DynamicOperation("BlankDescription", "blank-description", "  "),
+                new DynamicOperation("Sound", "sound", "An operation declared beside two faulty ones."));
+            var catalog = new OperationCatalog(() => new[] { Fixture, faulty, Core });
+            var settings = UnityEngine.ScriptableObject.CreateInstance<OperationSettings>();
+            var host = new OperationHost(catalog, () => settings);
+            var text = host.Run("core help", OperationCaller.Development(), ObservationContext.Discard).Result.Text;
+            StringAssert.StartsWith("succeeded: 2 groups, ", text);
+            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested. ("
+                                  + (sound + 1) + " operations)", text);
+            StringAssert.Contains("\ncore: ", text);
+            Assert.AreEqual(2, _recording.Count);
+        }
+
+        [Test]
+        public void AnOperationWhoseAttributeCannotBeReadIsSkippedWithOneLine() {
+            var unreadable = DynamicOperations.UnreadableAssembly("Zeta.Unreadable", "fixture");
+            var catalog = new OperationCatalog(() => new[] { Fixture, unreadable, Core });
+            Assert.IsNotNull(catalog.Describe("fixture", "echo"));
+            Assert.IsNotNull(catalog.Describe("core", "help"));
+            Assert.AreEqual(1, _recording.Count);
+            StringAssert.StartsWith("Operation on Zeta.Unreadable.Operations.Run could not be read and was skipped: ",
+                _recording.Entries[0].Message);
+        }
+
+        [Test]
+        public void AnOperationAttributeKeepsABlankNameAndDescription() {
+            var attribute = new OperationAttribute("", " ", OperationEffect.Reads);
+            Assert.AreEqual("", attribute.Name);
+            Assert.AreEqual(" ", attribute.Description);
+        }
+
+        [Test]
+        public void AnArgumentAttributeKeepsABlankDescription() {
+            Assert.AreEqual(" ", new ArgumentAttribute(" ").Description);
+        }
+
+        [Test]
+        public void AnOperationGroupAttributeKeepsABlankName() {
+            var attribute = new OperationGroupAttribute("", "A job.");
+            Assert.AreEqual("", attribute.Name);
+            Assert.AreEqual("A job.", attribute.Job);
+            Assert.AreEqual(" ", new OperationGroupAttribute(" ").Name);
+        }
+
+        [Test]
+        public void AnOperationWithABlankArgumentDescriptionIsSkippedWithOneLine() {
+            var faulty = DynamicOperations.AssemblyWithArgument("Zeta.FaultyArgument", "fixture", "blank-argument",
+                "text", " ");
+            var catalog = new OperationCatalog(() => new[] { Fixture, faulty, Core });
+            Assert.IsNull(catalog.Describe("fixture", "blank-argument"));
+            Assert.IsNotNull(catalog.Describe("fixture", "sound"));
+            Assert.IsNotNull(catalog.Describe("fixture", "echo"));
+            Assert.IsNotNull(catalog.Describe("core", "help"));
+            Assert.AreEqual(1, _recording.Count);
+            Assert.AreEqual("Operation 'fixture blank-argument' has an argument 'text' with an empty description and"
+                            + " was skipped.", _recording.Entries[0].Message);
+        }
+
+        [Test]
+        public void AGroupWithABlankNameIsSkippedWithOneLineAndTheRestLoads() {
+            var faulty = DynamicOperations.Assembly("Zeta.BlankGroup", " ", null, "orphan");
+            var catalog = new OperationCatalog(() => new[] { Fixture, faulty, Core });
+            var settings = UnityEngine.ScriptableObject.CreateInstance<OperationSettings>();
+            var host = new OperationHost(catalog, () => settings);
+            var text = host.Run("core help", OperationCaller.Development(), ObservationContext.Discard).Result.Text;
+            StringAssert.StartsWith("succeeded: 2 groups, ", text);
+            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested. (",
+                text);
+            Assert.IsNotNull(catalog.Describe("core", "help"));
+            Assert.IsNotNull(catalog.Describe("fixture", "echo"));
+            Assert.AreEqual(0, catalog.FindByName("orphan").Count);
+            Assert.AreEqual(1, _recording.Count);
+            Assert.AreEqual("Operation group in Zeta.BlankGroup has an empty name and was skipped.",
+                _recording.Entries[0].Message);
+        }
+
+        [Test]
+        public void AnInstanceInAnAssemblyWithABlankGroupNameIsNotRegistered() {
+            var faulty = DynamicOperations.InstanceType("Zeta.BlankGroupInstance", "", "orphan");
+            var instance = Activator.CreateInstance(faulty);
+            var catalog = new OperationCatalog(() => new[] { Fixture });
+            Assert.AreEqual(0, catalog.Register(instance));
+            Assert.AreEqual(1, _recording.Count);
+            Assert.AreEqual("Operation group in Zeta.BlankGroupInstance has an empty name and was skipped.",
+                _recording.Entries[0].Message);
+        }
+
+        [Test]
+        public void AnInstanceInAnAssemblyWhoseGroupCannotBeReadIsNotRegistered() {
+            var faulty = DynamicOperations.UnreadableInstanceType("Zeta.UnreadableGroupInstance", "orphan");
+            var instance = Activator.CreateInstance(faulty);
+            var catalog = new OperationCatalog(() => new[] { Fixture });
+            Assert.AreEqual(0, catalog.Register(instance));
+            Assert.AreEqual(0, catalog.FindByName("orphan").Count);
+            Assert.AreEqual(1, _recording.Count);
+            StringAssert.StartsWith("Operation group of Zeta.UnreadableGroupInstance could not be read and was"
+                                    + " skipped: ", _recording.Entries[0].Message);
+        }
+
+        [Test]
+        public void AnAssemblyWhoseGroupCannotBeReadIsLeftOutOfTheScanWithOneLine() {
+            var unreadable = DynamicOperations.UnreadableGroupAssembly("Zeta.UnreadableGroup");
+            var marked = MarkedAssemblyScan.Assemblies(new[] { Fixture, unreadable });
+            CollectionAssert.AreEqual(new[] { Fixture }, marked);
+            Assert.AreEqual(1, _recording.Count);
+            StringAssert.StartsWith("Operation group of Zeta.UnreadableGroup could not be read and was skipped: ",
+                _recording.Entries[0].Message);
+        }
+
+        [Test]
         public void AnOperationDeclaredTwiceKeepsTheFirstAndLogsTheSecond() {
             var duplicate = DynamicOperations.Assembly("Zeta.Duplicate", "fixture", null, "echo");
             var catalog = new OperationCatalog(() => new[] { Fixture, duplicate });
@@ -185,22 +318,129 @@ namespace Spellbound.Core.Tests {
         }
 
         private static class DynamicOperations {
+            private static readonly ConstructorInfo OperationConstructor = typeof(OperationAttribute).GetConstructor(
+                new[] { typeof(string), typeof(string), typeof(OperationEffect) });
+
+            private static readonly ConstructorInfo GroupConstructor = typeof(OperationGroupAttribute).GetConstructor(
+                new[] { typeof(string), typeof(string) });
+
             public static Assembly Assembly(string assemblyName, string group, string job, string operationName) {
-                var builder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
-                var groupConstructor = typeof(OperationGroupAttribute).GetConstructor(new[] { typeof(string), typeof(string) });
-                builder.SetCustomAttribute(new CustomAttributeBuilder(groupConstructor, new object[] { group, job }));
+                var operation = new DynamicOperation("Run", operationName, "A dynamic operation.");
+                return Assembly(assemblyName, group, job, operation);
+            }
+
+            public static Assembly Assembly(string assemblyName, string group, string job,
+                params DynamicOperation[] operations) {
+                var builder = DefineAssembly(assemblyName, group, job, out var type);
+
+                foreach (var operation in operations) {
+                    var method = DefineMethod(type, operation.MethodName);
+                    method.SetCustomAttribute(new CustomAttributeBuilder(OperationConstructor,
+                        new object[] { operation.Name, operation.Description, OperationEffect.Reads }));
+                }
+
+                type.CreateType();
+                return builder;
+            }
+
+            public static Assembly UnreadableAssembly(string assemblyName, string group) {
+                var builder = DefineAssembly(assemblyName, group, null, out var type);
+                var method = DefineMethod(type, "Run");
+                method.SetCustomAttribute(OperationConstructor, new byte[] { 1, 0, 5, (byte)'r' });
+                type.CreateType();
+                return builder;
+            }
+
+            public static Assembly AssemblyWithArgument(string assemblyName, string group, string operationName,
+                string parameterName, string argumentDescription) {
+                var builder = DefineAssembly(assemblyName, group, null, out var type);
+                var attributes = MethodAttributes.Public | MethodAttributes.Static;
+                var method = type.DefineMethod("WithArgument", attributes, typeof(string), new[] { typeof(string) });
+                method.SetCustomAttribute(new CustomAttributeBuilder(OperationConstructor,
+                    new object[] { operationName, "An operation whose argument is declared.", OperationEffect.Reads }));
+                var parameter = method.DefineParameter(1, ParameterAttributes.None, parameterName);
+                var argumentConstructor = typeof(ArgumentAttribute).GetConstructor(new[] { typeof(string) });
+                var argument = new CustomAttributeBuilder(argumentConstructor, new object[] { argumentDescription });
+                parameter.SetCustomAttribute(argument);
+                var generator = method.GetILGenerator();
+                generator.Emit(OpCodes.Ldarg_0);
+                generator.Emit(OpCodes.Ret);
+                var sound = DefineMethod(type, "Sound");
+                sound.SetCustomAttribute(new CustomAttributeBuilder(OperationConstructor,
+                    new object[] { "sound", "An operation declared beside a faulty one.", OperationEffect.Reads }));
+                type.CreateType();
+                return builder;
+            }
+
+            public static Type InstanceType(string assemblyName, string group, string operationName) {
+                var builder = NewAssembly(assemblyName);
+                MarkGroup(builder, group, null);
+                return DefineInstanceType(builder, assemblyName, operationName);
+            }
+
+            public static Type UnreadableInstanceType(string assemblyName, string operationName) {
+                var builder = NewAssembly(assemblyName);
+                builder.SetCustomAttribute(GroupConstructor, new byte[] { 1, 0, 5, (byte)'r' });
+                return DefineInstanceType(builder, assemblyName, operationName);
+            }
+
+            private static Type DefineInstanceType(AssemblyBuilder builder, string assemblyName, string operationName) {
                 var module = builder.DefineDynamicModule(assemblyName);
-                var type = module.DefineType(assemblyName + ".Operations",
-                    TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class);
-                var method = type.DefineMethod("Run", MethodAttributes.Public | MethodAttributes.Static, typeof(string), Type.EmptyTypes);
-                var operationConstructor = typeof(OperationAttribute).GetConstructor(new[] { typeof(string), typeof(string), typeof(OperationEffect) });
-                method.SetCustomAttribute(new CustomAttributeBuilder(operationConstructor,
-                    new object[] { operationName, "A dynamic operation.", OperationEffect.Reads }));
+                var type = module.DefineType(assemblyName + ".Instance", TypeAttributes.Public | TypeAttributes.Class);
+                type.DefineDefaultConstructor(MethodAttributes.Public);
+                var method = type.DefineMethod("Run", MethodAttributes.Public, typeof(string), Type.EmptyTypes);
+                method.SetCustomAttribute(new CustomAttributeBuilder(OperationConstructor,
+                    new object[] { operationName, "A dynamic instance operation.", OperationEffect.Reads }));
                 var generator = method.GetILGenerator();
                 generator.Emit(OpCodes.Ldstr, "dynamic");
                 generator.Emit(OpCodes.Ret);
-                type.CreateType();
+                return type.CreateType();
+            }
+
+            public static Assembly UnreadableGroupAssembly(string assemblyName) {
+                var builder = NewAssembly(assemblyName);
+                builder.SetCustomAttribute(GroupConstructor, new byte[] { 1, 0, 5, (byte)'r' });
+                builder.DefineDynamicModule(assemblyName);
                 return builder;
+            }
+
+            private static AssemblyBuilder DefineAssembly(string assemblyName, string group, string job,
+                out TypeBuilder type) {
+                var builder = NewAssembly(assemblyName);
+                MarkGroup(builder, group, job);
+                var module = builder.DefineDynamicModule(assemblyName);
+                type = module.DefineType(assemblyName + ".Operations",
+                    TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.Class);
+                return builder;
+            }
+
+            private static AssemblyBuilder NewAssembly(string assemblyName) {
+                return AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.Run);
+            }
+
+            private static void MarkGroup(AssemblyBuilder builder, string group, string job) {
+                builder.SetCustomAttribute(new CustomAttributeBuilder(GroupConstructor, new object[] { group, job }));
+            }
+
+            private static MethodBuilder DefineMethod(TypeBuilder type, string methodName) {
+                var attributes = MethodAttributes.Public | MethodAttributes.Static;
+                var method = type.DefineMethod(methodName, attributes, typeof(string), Type.EmptyTypes);
+                var generator = method.GetILGenerator();
+                generator.Emit(OpCodes.Ldstr, "dynamic");
+                generator.Emit(OpCodes.Ret);
+                return method;
+            }
+        }
+
+        private readonly struct DynamicOperation {
+            public string MethodName { get; }
+            public string Name { get; }
+            public string Description { get; }
+
+            public DynamicOperation(string methodName, string name, string description) {
+                MethodName = methodName;
+                Name = name;
+                Description = description;
             }
         }
     }
