@@ -2,7 +2,7 @@
 
 using Spellbound.Core.Operations;
 
-[assembly: OperationGroup("fixture")]
+[assembly: OperationGroup("fixture", Listed = false)]
 
 namespace Spellbound.Core.Tests.OperationFixture.Second {
     public static class SecondFixtureOperations {

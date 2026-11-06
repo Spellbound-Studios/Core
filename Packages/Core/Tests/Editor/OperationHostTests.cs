@@ -79,6 +79,13 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void ASuggestionWithoutAGroupComesOnlyFromListedGroups() {
+            Assert.IsFalse(_host.Catalog.Group("fixture").Listed);
+            StringAssert.DoesNotContain("Did you mean 'fixture", Text("fixtur echo --text hi"));
+            StringAssert.StartsWith("invalid: no operation 'cor help'. Did you mean 'core help'?", Text("cor help"));
+        }
+
+        [Test]
         public void UnknownGroupIsInvalid() {
             StringAssert.StartsWith("invalid: no operation 'nowhere echo'.", Text("nowhere echo hi"));
         }
@@ -187,7 +194,7 @@ namespace Spellbound.Core.Tests {
         [Test]
         public void AReadingOperationRunsUnderDryRunAndAnswersPreviewed() {
             Assert.AreEqual("previewed: hi", Text("fixture echo hi --dry-run"));
-            StringAssert.StartsWith("previewed: 2 groups, ", Text("core help --dry-run"));
+            StringAssert.StartsWith("previewed: 2 groups, ", Text("core help --all --dry-run"));
         }
 
         [Test]

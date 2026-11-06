@@ -6,7 +6,7 @@ using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using UnityEngine;
 
-[assembly: OperationGroup("fixture", "Operations that exist so the catalog and the host can be tested.")]
+[assembly: OperationGroup("fixture", "Operations that exist so the catalog and the host can be tested.", Listed = false)]
 
 namespace Spellbound.Core.Tests.OperationFixture {
     public static class FixtureOperations {

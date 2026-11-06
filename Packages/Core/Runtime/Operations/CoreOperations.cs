@@ -3,7 +3,6 @@
 using System.Text;
 using Spellbound.Core.Operations;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 [assembly: OperationGroup("core",
     "Gives every package one vocabulary: how to log, pack bytes, identify a thing, roll from a seeded stream, count steps of time, place a pose in a reference frame, measure a cost against a budget, declare an operation, and validate what a designer or an agent authors.")]
@@ -14,7 +13,7 @@ namespace Spellbound.Core.Operations {
             Audience = OperationAudiences.Anyone)]
         public static string Help(OperationContext context,
             [Argument("The group to list; leave it out to list every group.")] string group = null,
-            [Argument("True to list every operation of every group.")] bool all = false) {
+            [Argument("True to list every operation of every group, the unlisted groups included.")] bool all = false) {
             var catalog = context.Host.Catalog;
             var builder = new StringBuilder();
 
@@ -29,17 +28,23 @@ namespace Spellbound.Core.Operations {
                 return builder.ToString();
             }
 
+            var groups = 0;
             var operations = 0;
 
             foreach (var entry in catalog.Groups) {
-                operations += entry.Operations.Count;
+                if (all || entry.Listed) {
+                    groups++;
+                    operations += entry.Operations.Count;
+                }
             }
 
-            builder.Append(catalog.Groups.Count).Append(" groups, ").Append(operations).Append(" operations");
+            builder.Append(groups).Append(" groups, ").Append(operations).Append(" operations");
 
             foreach (var entry in catalog.Groups) {
-                builder.Append('\n');
-                AppendGroup(builder, entry, all);
+                if (all || entry.Listed) {
+                    builder.Append('\n');
+                    AppendGroup(builder, entry, all);
+                }
             }
 
             if (!all) {
@@ -49,15 +54,13 @@ namespace Spellbound.Core.Operations {
             return builder.ToString();
         }
 
-        [Operation("about", "Describes this process: the Unity version, the render pipeline and the operation groups it holds.",
+        [Operation("about", "Describes this process: the Unity version and the operation groups it holds.",
             OperationEffect.Reads, Audience = OperationAudiences.Anyone)]
         public static string About(OperationContext context) {
             var builder = new StringBuilder();
             builder.Append("Unity ").Append(Application.unityVersion);
             builder.Append(", ").Append(Application.isEditor ? "editor" : "player");
             builder.Append(Application.isPlaying ? ", playing" : ", not playing");
-            var pipeline = GraphicsSettings.currentRenderPipeline;
-            builder.Append("\nrender pipeline: ").Append(pipeline != null ? pipeline.name : "built-in");
 
             foreach (var package in InstalledPackages.All()) {
                 builder.Append('\n').Append(package.Line);

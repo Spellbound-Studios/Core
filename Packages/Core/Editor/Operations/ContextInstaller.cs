@@ -30,8 +30,12 @@ namespace Spellbound.Core.Operations.Editor {
             }
         }
 
+        public static string PathFor(ContextInstallTarget target, string projectRoot) {
+            return Path.Combine(projectRoot, RelativePath(target));
+        }
+
         public static string Install(ContextInstallTarget target, string projectRoot, out bool created) {
-            var path = Path.Combine(projectRoot, RelativePath(target));
+            var path = PathFor(target, projectRoot);
             created = !File.Exists(path);
             var directory = Path.GetDirectoryName(path);
 

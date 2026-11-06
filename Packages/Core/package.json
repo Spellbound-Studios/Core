@@ -17,5 +17,12 @@
     "name": "Spellbound Studios",
     "email": "Judsin1349@gmail.com",
     "url": "https://github.com/Spellbound-Studios/Core"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Benchmarks",
+      "description": "Times the packer writing and reading ints, floats, vectors and quaternions.",
+      "path": "Samples~/Benchmarks"
+    }
+  ]
 }

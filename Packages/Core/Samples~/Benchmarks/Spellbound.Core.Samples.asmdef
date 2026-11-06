@@ -1,0 +1,14 @@
+{
+  "name": "Spellbound.Core.Samples",
+  "rootNamespace": "Spellbound.Core.Samples",
+  "references": ["Spellbound.Core"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

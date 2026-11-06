@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using Spellbound.Core.Operations;
 using Spellbound.Core.UnityLedger;
@@ -71,8 +72,15 @@ namespace Spellbound.Core.Operations.Editor {
 
         [Operation("context-install", "Writes the stub that tells an agent how to reach the installed packages: a skill file, or a block in the project's AGENTS.md or CLAUDE.md.",
             OperationEffect.Writes)]
-        public static string ContextInstall([Argument("Skill writes .claude/skills/spellbound/SKILL.md; Agents and Claude write one delimited block into AGENTS.md or CLAUDE.md at the project root.")] ContextInstallTarget target) {
-            var path = ContextInstaller.Install(target, ContextInstaller.ProjectRoot(), out var created);
+        public static string ContextInstall(OperationContext context, [Argument("Skill writes .claude/skills/spellbound/SKILL.md; Agents and Claude write one delimited block into AGENTS.md or CLAUDE.md at the project root.")] ContextInstallTarget target) {
+            var projectRoot = ContextInstaller.ProjectRoot();
+
+            if (context.DryRun) {
+                var planned = ContextInstaller.PathFor(target, projectRoot);
+                return (File.Exists(planned) ? "would update " : "would write ") + planned;
+            }
+
+            var path = ContextInstaller.Install(target, projectRoot, out var created);
             return (created ? "wrote " : "updated ") + path;
         }
 
