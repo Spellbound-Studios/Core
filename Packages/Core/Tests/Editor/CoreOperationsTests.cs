@@ -25,11 +25,22 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void HelpListsTheGroups() {
-            var text = Text("core help");
+            var text = Text("core help --all");
             StringAssert.StartsWith("succeeded: 2 groups, ", text);
             StringAssert.Contains("\ncore: Gives every package one vocabulary", text);
-            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested. (", text);
-            StringAssert.Contains("Run: core help --group <name>, or core help --all", text);
+            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested.\n", text);
+            StringAssert.Contains("Run: core help --group <name>, or core help --all", Text("core help"));
+        }
+
+        [Test]
+        public void AnUnlistedGroupIsAbsentFromHelpAndPresentWithAll() {
+            Assert.IsFalse(_host.Catalog.Group("fixture").Listed);
+            var listed = Text("core help");
+            StringAssert.Contains("\ncore: Gives every package one vocabulary", listed);
+            StringAssert.DoesNotContain("\nfixture", listed);
+            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested.\n",
+                Text("core help --all"));
+            StringAssert.StartsWith("succeeded: fixture: Operations that exist", Text("core help --group fixture"));
         }
 
         [Test]
@@ -61,9 +72,10 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void AboutNamesUnityThePipelineAndTheGroups() {
+        public void AboutNamesUnityAndEveryGroup() {
             var text = Text("core about");
-            StringAssert.StartsWith("succeeded: Unity " + Application.unityVersion + ", editor, not playing\nrender pipeline: ", text);
+            StringAssert.StartsWith("succeeded: Unity " + Application.unityVersion + ", editor, not playing\n", text);
+            StringAssert.DoesNotContain("render pipeline", text);
             StringAssert.Contains("\ncore: 6 operations in Spellbound.Core", text);
             StringAssert.Contains("\nfixture: ", text);
         }

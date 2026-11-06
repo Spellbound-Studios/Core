@@ -2,4 +2,4 @@
 
 using Spellbound.Core.Operations;
 
-[assembly: OperationGroup("fixturecheck")]
+[assembly: OperationGroup("fixturecheck", Listed = false)]

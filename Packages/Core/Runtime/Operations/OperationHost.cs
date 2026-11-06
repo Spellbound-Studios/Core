@@ -277,7 +277,7 @@ namespace Spellbound.Core.Operations {
         private string Suggest(string typed, OperationGroupDescription group) {
             string best = null;
             var bestDistance = int.MaxValue;
-            var groups = group != null ? new List<OperationGroupDescription> { group } : new List<OperationGroupDescription>(Catalog.Groups);
+            var groups = group != null ? new List<OperationGroupDescription> { group } : ListedGroups();
 
             foreach (var candidateGroup in groups) {
                 foreach (var operation in candidateGroup.Operations) {
@@ -291,6 +291,18 @@ namespace Spellbound.Core.Operations {
             }
 
             return bestDistance <= Math.Max(2, typed.Length / 3) ? best : null;
+        }
+
+        private List<OperationGroupDescription> ListedGroups() {
+            var listed = new List<OperationGroupDescription>();
+
+            foreach (var candidate in Catalog.Groups) {
+                if (candidate.Listed) {
+                    listed.Add(candidate);
+                }
+            }
+
+            return listed;
         }
 
         private static int EditDistance(string left, string right) {

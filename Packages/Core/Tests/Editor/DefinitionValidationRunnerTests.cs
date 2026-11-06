@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Spellbound.Core.Tests {
     public class DefinitionValidationRunnerTests {
-        public const string PackagedFixturePath = "Packages/com.spellboundstudios.core/Tests/AuthoringFixture/Assets/PackagedFixture.asset";
+        public const string PackagedFixturePath = "Packages/com.spellboundstudios.core/Tests/Editor/AuthoringFixture/Assets/PackagedFixture.asset";
 
         private AuthoringTestFolder _folder;
         private DefinitionValidationRunner _runner;

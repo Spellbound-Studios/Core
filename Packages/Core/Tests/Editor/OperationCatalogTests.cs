@@ -157,9 +157,9 @@ namespace Spellbound.Core.Tests {
             var catalog = new OperationCatalog(() => new[] { Fixture, faulty, Core });
             var settings = UnityEngine.ScriptableObject.CreateInstance<OperationSettings>();
             var host = new OperationHost(catalog, () => settings);
-            var text = host.Run("core help", OperationCaller.Development(), ObservationContext.Discard).Result.Text;
+            var text = host.Run("core help --all", OperationCaller.Development(), ObservationContext.Discard).Result.Text;
             StringAssert.StartsWith("succeeded: 2 groups, ", text);
-            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested. (",
+            StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested.\n",
                 text);
             Assert.IsNotNull(catalog.Describe("core", "help"));
             Assert.IsNotNull(catalog.Describe("fixture", "echo"));

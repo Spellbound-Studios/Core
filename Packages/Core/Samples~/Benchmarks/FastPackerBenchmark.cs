@@ -1,11 +1,12 @@
-﻿// Copyright 2026 Spellbound Studio Inc.
+﻿// Copyright (c) Spellbound Studios. All rights reserved.
 
 using System;
 using System.Diagnostics;
 using Spellbound.Core.Logging;
+using Spellbound.Core.Packing;
 using UnityEngine;
 
-namespace Spellbound.Core.Packing {
+namespace Spellbound.Core.Samples {
     public sealed class FastPackerBenchmark : MonoBehaviour {
         [SerializeField] private int iterations = 1_000_000;
 

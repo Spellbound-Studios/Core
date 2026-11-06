@@ -7,6 +7,7 @@ namespace Spellbound.Core.Operations {
     public sealed class OperationGroupAttribute : Attribute {
         public string Name { get; }
         public string Job { get; }
+        public bool Listed { get; set; } = true;
 
         public OperationGroupAttribute(string name) : this(name, null) { }
 

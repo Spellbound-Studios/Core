@@ -186,6 +186,7 @@ namespace Spellbound.Core.Operations {
                 }
                 else {
                     group.AddAssembly(assembly.GetName().Name);
+                    group.Listed |= attribute.Listed;
 
                     if (string.IsNullOrWhiteSpace(group.Job)) {
                         group.Job = attribute.Job;
@@ -216,7 +217,7 @@ namespace Spellbound.Core.Operations {
         }
 
         private OperationGroupDescription AddGroup(OperationGroupAttribute attribute, Assembly assembly) {
-            var group = new OperationGroupDescription(attribute.Name, attribute.Job);
+            var group = new OperationGroupDescription(attribute.Name, attribute.Job, attribute.Listed);
             group.AddAssembly(assembly.GetName().Name);
             _groups.Add(group);
             return group;

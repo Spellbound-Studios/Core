@@ -9,12 +9,14 @@ namespace Spellbound.Core.Operations {
 
         public string Name { get; }
         public string Job { get; internal set; }
+        public bool Listed { get; internal set; }
         public IReadOnlyList<OperationDescription> Operations => _operations;
         public IReadOnlyList<string> Assemblies => _assemblies;
 
-        internal OperationGroupDescription(string name, string job) {
+        internal OperationGroupDescription(string name, string job, bool listed) {
             Name = name;
             Job = job;
+            Listed = listed;
         }
 
         internal void AddAssembly(string assemblyName) {

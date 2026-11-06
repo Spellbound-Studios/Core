@@ -242,7 +242,7 @@ namespace Spellbound.Core.Tests {
             Assert.IsFalse(DefinitionDrafts.IsInImmutablePackage("Packages/com.spellboundstudios.core/package.json"));
             Assert.IsFalse(DefinitionDrafts.IsInImmutablePackage(_folder.Path + "/Ore.asset"));
             var packaged = AssetDatabase.LoadMainAssetAtPath(
-                    "Packages/com.spellboundstudios.core/Tests/AuthoringFixture/Assets/PackagedFixture.asset")
+                    "Packages/com.spellboundstudios.core/Tests/Editor/AuthoringFixture/Assets/PackagedFixture.asset")
                 as ScriptableObject;
             Assert.IsNotNull(packaged);
             Assert.IsTrue(DefinitionDrafts.CanRevise(packaged, _settings, out _, out var refusal), refusal);

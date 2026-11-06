@@ -23,7 +23,7 @@ Debug.Log(run.Result.Text);
 
 A package declares what it observes once, as static fields: `CoreKit.Observations.Counter(key, description)`, `Occurrence(key, description)`, `Gauge(key, description, unit)` and `Cost(key, description, unit, defaultBudget, defaultQualityLevel)`, the key spelled `package.subject.name` and the description required. It reports against an `ObservationContext` a world instance owns, made by `CoreKit.Observations.CreateContext(name, settings)`: `counter.Add(context, reason)`, `occurrence.Record(context, tick, subject)`, `gauge.Set(context, value)`, `cost.Record(context, amount)` or `using (cost.Measure(context))`. Every door that reports takes the context as its last explicit argument and never looks one up; a caller that wants none passes `ObservationContext.Discard`. `context.Read(package, readings)` fills a caller-owned list of `ObservationReading` without allocating, `TryRead`, `ReadReasons`, `Version(key)` and `PackageVersion(package)` read one key or a package's change count, `SetBudget` and `SetQualityLevel` override a declaration's defaults, and `ObservationContexts.All` lists the live contexts for a collector. `CoreKit.Observations.Declared()` lists every declaration with nothing running, `Reason(name)` registers a reason name once, and `Compare(before, after, ratios)` gives the ratio per key. `OperationHost.Run(line, caller, observations)` records each operation group's duration under `<group>.operations` and its failures under `<group>.operation_failures`; `CallSiteLogSink` counts logged lines under `core.log.<level>` with the call site as the reason.
 
-A package declares what an agent or a person can call with `[assembly: OperationGroup(name, job)]` on its assembly and `[Operation(name, description, effect)]` on a public static method, each parameter described by `[Argument(description)]`. The same declaration serves C#, a console, the Spellbound window and the Unity command line, where `spellbound_run` takes one operation line. `core context --package <group>` prints a package's own context with its operations. The generated text below is refreshed from the live catalog by `core context`.
+A package declares what an agent or a person can call with `[assembly: OperationGroup(name, job)]` on its assembly and `[Operation(name, description, effect)]` on a public static method, each parameter described by `[Argument(description)]`. The same declaration serves C#, a console, the Spellbound window and the Unity command line, where `spellbound_run` takes one operation line. `core context --package <group>` prints a package's own context with its operations. A group declared `[assembly: OperationGroup("name", "job", Listed = false)]` is left out of `core help` and of the suggestion for an unknown line; `core help --all` lists every group, the unlisted ones included, with every operation and its arguments. Every writing operation of Core previews under `--dry-run`, `core context-install` included. The generated text below is refreshed from the live catalog by `core context`.
 
 A definition a designer or an agent authors is a ScriptableObject that implements `IAuthoredDefinition` and adds its findings to a `ValidationReport` (`Error`, `Warning`, `Information`, each with a code `<package>.<kebab-name>`). Core.Editor runs it: `core validate` over an asset, a folder, a package folder, the drafts folder or everything, `core preview`, `core drafts` and `core approve`. A package adds a check to a definition another package owns by implementing `IDefinitionCheck<T>` in its own editor assembly and marking the class `[RegisteredDefinitionCheck("<package>.<kebab-name>")]`; a `DefinitionPreviewer<T>` in that assembly draws its summary. A report is the status line, then `checks:` naming what ran as `<name> (<Package>)`, then one finding per line, code first.
 
@@ -31,10 +31,10 @@ A package declares what it is once, in the `Identity.asset` at its root, a `Pack
 
 An editor window or inspector takes the installed look with `EditorLook.Dress(root)`: the theme class, Core's layout sheet, every sheet a package registered through `EditorLook.Register(LookSource)` and the project's own from an `EditorLookSettings` asset. Core ships no theme; a `HeaderBar` shows one of the `HeaderStates`, and `ButtonVariants` and `ChipTones` name the shared classes a look styles. A look or project rule is scoped under `.sb-theme`, so it wins over Core's layout sheet.
 
-<!-- spellbound:operations 0df55cd9 -->
+<!-- spellbound:operations a09a5863 -->
 com.spellboundstudios.core
 Operations of the group `core`, run as `<group> <operation> [arguments]`:
-- `core about`: Describes this process: the Unity version, the render pipeline and the operation groups it holds. [reads, anyone]
+- `core about`: Describes this process: the Unity version and the operation groups it holds. [reads, anyone]
 - `core approve --target <scriptable-object> [--to <text>]`: Moves a draft out of the drafts folder into the project, keeping its GUID, or writes a revision over its original; refused while the draft has an error finding. [writes, approver]
   - `--target`: The draft, as asset:<path> or asset:<name>.
   - `--to`: The folder under Assets the approved asset moves to; a revision takes none. Default: none.
@@ -45,7 +45,7 @@ Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core drafts`: Lists the definitions waiting in the drafts folder with the state of their report, when each was saved, and for a revision its original and when that was saved. [reads, developer]
 - `core help [--group <text>] [--all <true or false> = false]`: Lists the operation groups, or the operations of one group with their arguments. [reads, anyone]
   - `--group`: The group to list; leave it out to list every group. Default: none.
-  - `--all`: True to list every operation of every group. Default: false.
+  - `--all`: True to list every operation of every group, the unlisted groups included. Default: false.
 - `core history [--offset <integer> = 0] [--limit <integer> = 50]`: Lists the operation lines this host has run, oldest first, with their status, caller and frame. [reads, developer]
   - `--offset`: How many entries to skip from the start. Default: 0.
   - `--limit`: How many entries to list. Default: 50.
@@ -88,6 +88,11 @@ Bridges, each compiled only when its package is installed:
 Agents run these operation lines from the Unity command line when `com.unity.pipeline` is installed in [0.8.0-exp.1,0.9.0-exp.1) or [0.9.0-exp.1,0.10.0-exp.1) or [0.10.0-exp.1,0.11.0-exp.1): find the command with `unity command --query spellbound` and pass it one line.
 <!-- /spellbound:pipeline -->
 
+<!-- spellbound:samples 333d9287 -->
+Samples in `Samples~`, imported from the Package Manager's Samples tab:
+- Benchmarks: Times the packer writing and reading ints, floats, vectors and quaternions. (`Samples~/Benchmarks`)
+<!-- /spellbound:samples -->
+
 ## Rules
 
 The binding rules are the line text at https://github.com/Spellbound-Studios/.github/tree/main/line
@@ -120,7 +125,6 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 - A line captured from Unity's own log (`UnityLogCapture`) reaches `CallSiteLogSink` with the source `Unity`, the log type as its member and line 0, so every `Debug.Log` from anywhere counts under one call site per log type.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
 - The Spellbound window holds no page of Core's own yet: the Line, Package, Operations and Drafts pages are not built.
-- `core context-install` writes and takes no `OperationContext`, so it cannot preview and is refused under `--dry-run`.
 
 ## Ledger
 
