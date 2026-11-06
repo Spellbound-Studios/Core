@@ -11,10 +11,18 @@ namespace Spellbound.Core.Pipeline {
             "Runs one Spellbound operation line, the same text the in-game console accepts. Start with: core help";
 
         public const string LineDescription = "The operation line, for example: core help";
+        public const string WorldDescription =
+            "The live world whose observations the operation records; leave it out to record into the one live world,"
+            + " or nowhere when several are live";
+
         public const string Tag = "spellbound";
 
-        public static async Task<string> Run(string line) {
-            var run = CoreKit.Operations.Run(line, PipelineCaller.Current, ObservationContext.Discard);
+        public static async Task<string> Run(string line, string world) {
+            if (!ObservationContexts.TryResolve(world, out var observations, out var failure)) {
+                throw new ArgumentException(OperationResult.Invalid(failure).Text);
+            }
+
+            var run = CoreKit.Operations.Run(line, PipelineCaller.Current, observations);
             var result = await run.AsTask();
 
             switch (result.Status) {

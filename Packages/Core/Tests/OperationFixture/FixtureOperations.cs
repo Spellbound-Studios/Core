@@ -53,6 +53,22 @@ namespace Spellbound.Core.Tests.OperationFixture {
             return "wiped 3 things";
         }
 
+        public static int StampCount { get; private set; }
+        public static int PurgeCount { get; private set; }
+
+        [Operation("stamp", "Adds one to the stamp count; it takes no context, so it cannot preview.",
+            OperationEffect.Writes)]
+        public static string Stamp() {
+            StampCount++;
+            return "stamped " + StampCount;
+        }
+
+        [Operation("purge", "Deletes everything; it takes no context, so it cannot preview.", OperationEffect.Destroys)]
+        public static string Purge() {
+            PurgeCount++;
+            return "purged 3 things";
+        }
+
         [Operation("secret", "Needs the approver audience.", OperationEffect.Writes, Audience = OperationAudiences.Approver)]
         public static string Secret() => "approved";
 
@@ -124,6 +140,8 @@ namespace Spellbound.Core.Tests.OperationFixture {
 
         public static void Reset() {
             WipeCount = 0;
+            StampCount = 0;
+            PurgeCount = 0;
             LastObservations = null;
         }
     }

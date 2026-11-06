@@ -13,14 +13,6 @@ namespace Spellbound.Core.Operations {
         public OperationAvailability Availability { get; set; } = OperationAvailability.Anytime;
 
         public OperationAttribute(string name, string description, OperationEffect effect) {
-            if (string.IsNullOrWhiteSpace(name)) {
-                throw new ArgumentException("Operation name must not be null, empty or whitespace.", nameof(name));
-            }
-
-            if (string.IsNullOrWhiteSpace(description)) {
-                throw new ArgumentException("Operation description must not be null, empty or whitespace.", nameof(description));
-            }
-
             Name = name;
             Description = description;
             Effect = effect;

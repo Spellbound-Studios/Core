@@ -21,6 +21,7 @@ namespace Spellbound.Core.Operations {
         internal MethodInfo Method { get; }
         internal object Instance { get; }
         internal int ContextParameterIndex { get; }
+        internal bool CanPreview => ContextParameterIndex >= 0;
         internal string AssemblyName => Method.DeclaringType?.Assembly.GetName().Name;
 
         internal OperationDescription(string group, OperationAttribute attribute, MethodInfo method, object instance,

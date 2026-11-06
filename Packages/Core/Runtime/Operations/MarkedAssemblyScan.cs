@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Spellbound.Core.Logging;
 using Spellbound.Core.Tooling;
 
 namespace Spellbound.Core.Operations {
@@ -27,7 +28,7 @@ namespace Spellbound.Core.Operations {
             }
 
             foreach (var assembly in candidates) {
-                if (assembly != null && assembly.GetCustomAttribute<OperationGroupAttribute>() != null) {
+                if (assembly != null && IsMarked(assembly)) {
                     marked.Add(assembly);
                 }
             }
@@ -59,6 +60,17 @@ namespace Spellbound.Core.Operations {
             }
 
             return found;
+        }
+
+        private static bool IsMarked(Assembly assembly) {
+            try {
+                return assembly.GetCustomAttribute<OperationGroupAttribute>() != null;
+            }
+            catch (Exception exception) {
+                Log.Error("Operation group of " + assembly.GetName().Name + " could not be read and was skipped: "
+                          + exception.GetBaseException().Message);
+                return false;
+            }
         }
     }
 }

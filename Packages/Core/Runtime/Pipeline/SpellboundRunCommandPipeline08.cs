@@ -11,8 +11,10 @@ namespace Spellbound.Core.Pipeline {
 
         [CliCommand(CommandName, SpellboundRunCommand.Description, Tags = new[] { SpellboundRunCommand.Tag })]
         [Preserve]
-        public static Task<string> Run([CliArg("line", SpellboundRunCommand.LineDescription, Required = true)] string line) {
-            return SpellboundRunCommand.Run(line);
+        public static Task<string> Run(
+            [CliArg("line", SpellboundRunCommand.LineDescription, Required = true)] string line,
+            [CliArg("world", SpellboundRunCommand.WorldDescription)] string world = null) {
+            return SpellboundRunCommand.Run(line, world);
         }
     }
 }

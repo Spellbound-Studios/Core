@@ -100,10 +100,23 @@ namespace Spellbound.Core.Operations {
             }
 
             var type = instance.GetType();
-            var groupAttribute = type.Assembly.GetCustomAttribute<OperationGroupAttribute>();
+            OperationGroupAttribute groupAttribute;
+
+            try {
+                groupAttribute = type.Assembly.GetCustomAttribute<OperationGroupAttribute>();
+            }
+            catch (Exception exception) {
+                Log.Error("Operation group of " + type.Assembly.GetName().Name + " could not be read and was skipped: "
+                          + exception.GetBaseException().Message);
+                return 0;
+            }
 
             if (groupAttribute == null) {
                 Log.Error("Operations on " + type.FullName + " cannot be registered: its assembly carries no OperationGroup attribute.");
+                return 0;
+            }
+
+            if (HasBlankName(groupAttribute, type.Assembly)) {
                 return 0;
             }
 
@@ -155,6 +168,11 @@ namespace Spellbound.Core.Operations {
 
             foreach (var assembly in MarkedAssemblies()) {
                 var attribute = assembly.GetCustomAttribute<OperationGroupAttribute>();
+
+                if (HasBlankName(attribute, assembly)) {
+                    continue;
+                }
+
                 var group = Group(attribute.Name);
 
                 if (group == null) {
@@ -218,9 +236,30 @@ namespace Spellbound.Core.Operations {
         }
 
         private static OperationDescription Describe(string group, MethodInfo method, object instance) {
+            try {
+                return DescribeDeclaration(group, method, instance);
+            }
+            catch (Exception exception) {
+                Log.Error("Operation on " + DeclaredName(method) + " could not be read and was skipped: "
+                          + exception.GetBaseException().Message);
+                return null;
+            }
+        }
+
+        private static OperationDescription DescribeDeclaration(string group, MethodInfo method, object instance) {
             var attribute = method.GetCustomAttribute<OperationAttribute>(false);
 
             if (attribute == null) {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(attribute.Name)) {
+                Log.Error("Operation on " + DeclaredName(method) + " has an empty name and was skipped.");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(attribute.Description)) {
+                Log.Error("Operation on " + DeclaredName(method) + " has an empty description and was skipped.");
                 return null;
             }
 
@@ -251,13 +290,34 @@ namespace Spellbound.Core.Operations {
                     return null;
                 }
 
-                var summary = parameter.GetCustomAttribute<ArgumentAttribute>(false)?.Description ?? string.Empty;
+                var argument = parameter.GetCustomAttribute<ArgumentAttribute>(false);
+
+                if (argument != null && string.IsNullOrWhiteSpace(argument.Description)) {
+                    Log.Error("Operation '" + group + " " + attribute.Name + "' has an argument '" + parameter.Name
+                              + "' with an empty description and was skipped.");
+                    return null;
+                }
+
+                var summary = argument?.Description ?? string.Empty;
                 var underlying = Nullable.GetUnderlyingType(parameter.ParameterType) ?? parameter.ParameterType;
                 var legal = underlying.IsEnum ? Enum.GetNames(underlying) : underlying == typeof(bool) ? new[] { "true", "false" } : null;
                 arguments.Add(new ArgumentDescription(parameter, ArgumentText.KebabCase(parameter.Name), summary, legal));
             }
 
             return new OperationDescription(group, attribute, method, instance, arguments, contextIndex);
+        }
+
+        private static bool HasBlankName(OperationGroupAttribute attribute, Assembly assembly) {
+            if (!string.IsNullOrWhiteSpace(attribute.Name)) {
+                return false;
+            }
+
+            Log.Error("Operation group in " + assembly.GetName().Name + " has an empty name and was skipped.");
+            return true;
+        }
+
+        private static string DeclaredName(MethodInfo method) {
+            return method.DeclaringType?.FullName + "." + method.Name;
         }
 
         private static List<Type> SortedTypes(Assembly assembly) {

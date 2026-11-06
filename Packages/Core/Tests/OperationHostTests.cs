@@ -151,6 +151,46 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void AWritingOperationWithoutAContextIsRefusedUnderDryRunAndNothingChanges() {
+            Assert.AreEqual("invalid: fixture stamp cannot preview; it takes no OperationContext, so --dry-run would"
+                            + " run it\nRun it without --dry-run to apply it", Text("fixture stamp --dry-run"));
+            Assert.AreEqual(0, FixtureOperations.StampCount);
+            Assert.AreEqual("succeeded: stamped 1", Text("fixture stamp"));
+            Assert.AreEqual(1, FixtureOperations.StampCount);
+        }
+
+        [Test]
+        public void ADeletingOperationWithoutAContextNeverRunsUnderDryRun() {
+            Assert.AreEqual("invalid: fixture purge cannot preview; it takes no OperationContext, so --dry-run would"
+                            + " run it\nRun it with --confirm and without --dry-run to apply it",
+                Text("fixture purge --dry-run"));
+            Assert.AreEqual(0, FixtureOperations.PurgeCount);
+            Assert.AreEqual("invalid: fixture purge cannot preview; it takes no OperationContext, so --dry-run would"
+                            + " run it\nRun it without --dry-run to apply it",
+                Text("fixture purge --dry-run --confirm"));
+            Assert.AreEqual(0, FixtureOperations.PurgeCount);
+            Assert.AreEqual("refused: this operation deletes data\nAdd --confirm to apply", Text("fixture purge"));
+            Assert.AreEqual(0, FixtureOperations.PurgeCount);
+            Assert.AreEqual("succeeded: purged 3 things", Text("fixture purge --confirm"));
+            Assert.AreEqual(1, FixtureOperations.PurgeCount);
+        }
+
+        [Test]
+        public void AnInvocationUnderDryRunOfAnOperationWithoutAContextIsRefused() {
+            var identifier = _host.Catalog.Describe("fixture", "stamp").Identifier;
+            var stamp = new OperationInvocation(identifier, new object[0], dryRun: true);
+            var text = _host.Run(stamp, _developer, ObservationContext.Discard).Result.Text;
+            StringAssert.StartsWith("invalid: fixture stamp cannot preview", text);
+            Assert.AreEqual(0, FixtureOperations.StampCount);
+        }
+
+        [Test]
+        public void AReadingOperationRunsUnderDryRunAndAnswersPreviewed() {
+            Assert.AreEqual("previewed: hi", Text("fixture echo hi --dry-run"));
+            StringAssert.StartsWith("previewed: 2 groups, ", Text("core help --dry-run"));
+        }
+
+        [Test]
         public void AudienceIsCheckedAgainstTheCaller() {
             Assert.AreEqual("refused: fixture secret needs audience 'approver'; this caller holds 'developer'", Text("fixture secret"));
             var approver = new OperationCaller("window", OperationAudiences.Developer, OperationAudiences.Approver);

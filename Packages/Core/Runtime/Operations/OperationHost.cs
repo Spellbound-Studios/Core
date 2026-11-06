@@ -330,7 +330,7 @@ namespace Spellbound.Core.Operations {
             }
 
             var context = new OperationContext(this, run, caller, observations, dryRun, confirmed, cancellationToken);
-            var arguments = new object[values.Length + (description.ContextParameterIndex >= 0 ? 1 : 0)];
+            var arguments = new object[values.Length + (description.CanPreview ? 1 : 0)];
             var valueIndex = 0;
 
             for (var i = 0; i < arguments.Length; i++) {
@@ -410,8 +410,20 @@ namespace Spellbound.Core.Operations {
                 return OperationResult.Refused(description.Line + " needs audience '" + audience + "'; this caller holds " + held);
             }
 
+            if (dryRun && description.Effect != OperationEffect.Reads && !description.CanPreview) {
+                var hint = description.Effect == OperationEffect.Destroys && !confirmed
+                    ? "Run it with --confirm and without --dry-run to apply it"
+                    : "Run it without --dry-run to apply it";
+                return OperationResult.Invalid(description.Line
+                                               + " cannot preview; it takes no OperationContext, so --dry-run would run"
+                                               + " it\n" + hint);
+            }
+
             if (description.Effect == OperationEffect.Destroys && !confirmed && !dryRun) {
-                return OperationResult.Refused("this operation deletes data\nAdd --dry-run to preview or --confirm to apply");
+                var wayForward = description.CanPreview
+                    ? "Add --dry-run to preview or --confirm to apply"
+                    : "Add --confirm to apply";
+                return OperationResult.Refused("this operation deletes data\n" + wayForward);
             }
 
             return null;

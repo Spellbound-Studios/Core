@@ -10,7 +10,18 @@ namespace Spellbound.Core.Tests {
         public void TheRangesAreReadFromTheBridgeAssemblyDefinition() {
             var path = PipelineBridgeRanges.AssemblyDefinitionPath();
             Assert.IsTrue(File.Exists(path), path);
-            CollectionAssert.AreEqual(new[] { "[0.8.0-exp.1,0.9.0-exp.1)", "[0.9.0-exp.1,0.10.0-exp.1)" }, PipelineBridgeRanges.Read());
+            CollectionAssert.AreEqual(
+                new[] { "[0.8.0-exp.1,0.9.0-exp.1)", "[0.9.0-exp.1,0.10.0-exp.1)", "[0.10.0-exp.1,0.11.0-exp.1)" },
+                PipelineBridgeRanges.Read());
+        }
+
+        [Test]
+        public void EveryPipelineFromZeroEightThroughZeroTenIsInsideARange() {
+            var ranges = PipelineBridgeRanges.Read();
+            Assert.IsTrue(PipelineBridgeRanges.Supports("0.8.0-exp.1", ranges));
+            Assert.IsTrue(PipelineBridgeRanges.Supports("0.9.1-exp.1", ranges));
+            Assert.IsTrue(PipelineBridgeRanges.Supports("0.10.0-exp.1", ranges));
+            Assert.IsFalse(PipelineBridgeRanges.Supports("0.11.0-exp.1", ranges));
         }
 
         [Test]

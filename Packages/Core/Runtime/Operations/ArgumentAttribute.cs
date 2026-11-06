@@ -8,10 +8,6 @@ namespace Spellbound.Core.Operations {
         public string Description { get; }
 
         public ArgumentAttribute(string description) {
-            if (string.IsNullOrWhiteSpace(description)) {
-                throw new ArgumentException("Argument description must not be null, empty or whitespace.", nameof(description));
-            }
-
             Description = description;
         }
     }
