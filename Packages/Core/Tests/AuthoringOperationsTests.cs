@@ -40,13 +40,16 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void TheFiveOperationsJoinTheCoreGroup() {
-            foreach (var name in new[] { "validate", "preview", "drafts", "approve" }) {
+            foreach (var name in new[] { "validate", "preview", "drafts", "revise", "approve" }) {
                 Assert.IsNotNull(_host.Catalog.Describe("core", name), name);
             }
 
             var help = Text("core help --group core");
             StringAssert.Contains("core validate", help);
             StringAssert.Contains("core approve", help);
+            StringAssert.Contains("core revise", help);
+            Assert.AreEqual(OperationAudiences.Developer, _host.Catalog.Describe("core", "revise").Audience);
+            Assert.AreEqual(OperationEffect.Writes, _host.Catalog.Describe("core", "revise").Effect);
             Assert.AreEqual(OperationAudiences.Approver, _host.Catalog.Describe("core", "approve").Audience);
             Assert.AreEqual(OperationEffect.Writes, _host.Catalog.Describe("core", "approve").Effect);
         }
@@ -91,6 +94,43 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void TheTimingTableShowsTheAuthoredKeyScan() {
+            var asset = _folder.Create("Scanned", "scanned", 1);
+            var text = Text("core validate --path " + AssetDatabase.GetAssetPath(asset) + " --timings");
+            var table = text.Substring(text.IndexOf("\ncheck", System.StringComparison.Ordinal));
+            StringAssert.Contains("AuthoredKeyScan (Core)", table);
+            StringAssert.DoesNotContain("AuthoredKeyScan", text.Split('\n')[1]);
+        }
+
+        [Test]
+        public void TheDryRunOfApproveRefusesWhatTheRealApproveRefuses() {
+            var draft = DefinitionDrafts.Create<FixtureDefinition>("Unplaced", definition => definition.title = "x",
+                _settings);
+            var needsFolder = draft.Path + " is a draft and needs a folder under Assets to move to";
+            Assert.AreEqual("previewed: " + draft.Path + " would be refused: " + needsFolder,
+                Text("core approve asset:" + draft.Path + " --dry-run", _approver));
+            Assert.AreEqual("refused: " + needsFolder, Text("core approve asset:" + draft.Path, _approver));
+
+            Quarry();
+            Text("core revise asset:Quarry");
+            var revisionPath = _folder.Path + "/Drafts/Quarry-revision.asset";
+            var withFolder = Text("core approve asset:Quarry-revision --to " + _folder.Path + "/Content --dry-run",
+                _approver);
+            StringAssert.StartsWith("previewed: " + revisionPath + " would be refused: " + revisionPath
+                                    + " is a revision of Quarry; approve it without a folder", withFolder);
+            StringAssert.StartsWith("refused: " + revisionPath + " is a revision of Quarry",
+                Text("core approve asset:Quarry-revision --to " + _folder.Path + "/Content", _approver));
+        }
+
+        [Test]
+        public void ADraftNamedLikeARevisionApprovesWithAFolder() {
+            var draft = DefinitionDrafts.Create<FixtureDefinition>("stone-revision",
+                definition => definition.title = "stone", _settings);
+            Assert.AreEqual("succeeded: approved stone-revision at " + _folder.Path + "/Content/stone-revision.asset",
+                Text("core approve asset:" + draft.Path + " --to " + _folder.Path + "/Content", _approver));
+        }
+
+        [Test]
         public void ValidateABadPathIsInvalid() {
             StringAssert.StartsWith("invalid: 'Assets/Nowhere' is neither an asset nor a folder", Text("core validate --path Assets/Nowhere"));
             StringAssert.StartsWith("invalid: '../x' is outside Assets and Packages", Text("core validate --path ../x"));
@@ -118,7 +158,8 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void DraftsListsTheDraftsFolderAsATable() {
-            Assert.AreEqual("succeeded: draft  type  report  path", Text("core drafts"));
+            Assert.AreEqual("succeeded: draft  type  report  path  saved  original  original saved",
+                Text("core drafts"));
             DefinitionDrafts.Create<FixtureDefinition>("Ore", definition => definition.title = "ore", _settings);
             DefinitionDrafts.Create<FixtureDefinition>("Blank", null, _settings);
             var text = Text("core drafts");
@@ -173,6 +214,89 @@ namespace Spellbound.Core.Tests {
             _settings.bridgeAudiences = new[] { OperationAudiences.Developer, OperationAudiences.Approver };
             var granted = new OperationCaller("bridge", _settings.bridgeAudiences);
             StringAssert.StartsWith("succeeded: approved Agentic", Text("core approve asset:" + draft.Path + " --to " + _folder.Path + "/Content", granted));
+        }
+
+        [Test]
+        public void ReviseAnswersTheDraftAndOneLinePerReferenceOutsideTheDrafts() {
+            var quarry = Quarry();
+            var revisionPath = _folder.Path + "/Drafts/Quarry-revision.asset";
+            var text = Text("core revise asset:Quarry");
+            Assert.AreEqual("succeeded: draft of Quarry at " + revisionPath
+                            + "\nmaterial keeps its data in asset:Granite (Core);"
+                            + " revise it with core revise asset:Granite"
+                            + "\nextras[2] keeps its data in asset:Granite (Core);"
+                            + " revise it with core revise asset:Granite", text);
+            var revision = AssetDatabase.LoadMainAssetAtPath(revisionPath) as FixtureReferencingDefinition;
+            Assert.IsNotNull(revision);
+            Assert.AreSame(quarry.material, revision.material);
+            StringAssert.StartsWith("refused: " + revisionPath + " exists already", Text("core revise asset:Quarry"));
+        }
+
+        [Test]
+        public void ReviseWithDryRunSaysWhatWouldHappenAndWritesNothing() {
+            var quarry = Quarry();
+            var text = Text("core revise asset:Quarry --dry-run");
+            StringAssert.StartsWith("previewed: " + AssetDatabase.GetAssetPath(quarry) + " would be copied to "
+                                    + _folder.Path
+                                    + "/Drafts/Quarry-revision.asset\nmaterial keeps its data in asset:Granite", text);
+            Assert.IsNull(AssetDatabase.LoadMainAssetAtPath(_folder.Path + "/Drafts/Quarry-revision.asset"));
+        }
+
+        [Test]
+        public void DraftsListsARevisionWithItsOriginalAndBothSavedTimes() {
+            var quarry = Quarry();
+            var originalPath = AssetDatabase.GetAssetPath(quarry);
+            Text("core revise asset:Quarry");
+            var revisionPath = _folder.Path + "/Drafts/Quarry-revision.asset";
+            var lines = Text("core drafts").Split('\n');
+            Assert.AreEqual(3, lines.Length);
+            StringAssert.StartsWith("Pebble  ", lines[1]);
+            StringAssert.StartsWith("Quarry-revision  FixtureReferencingDefinition  no findings  " + revisionPath,
+                lines[2]);
+            StringAssert.Contains(Saved(revisionPath) + "  " + originalPath + "  " + Saved(originalPath), lines[2]);
+        }
+
+        [Test]
+        public void ApproveOfARevisionNeedsNoFolderAndKeepsTheOriginalsGuid() {
+            var quarry = Quarry();
+            var originalPath = AssetDatabase.GetAssetPath(quarry);
+            var guid = AssetDatabase.AssetPathToGUID(originalPath);
+            Text("core revise asset:Quarry");
+            var revisionPath = _folder.Path + "/Drafts/Quarry-revision.asset";
+            var revision = AssetDatabase.LoadMainAssetAtPath(revisionPath) as FixtureReferencingDefinition;
+            revision.material = null;
+            EditorUtility.SetDirty(revision);
+            AssetDatabase.SaveAssets();
+
+            Assert.AreEqual("previewed: " + revisionPath + " would be written over " + originalPath,
+                Text("core approve asset:Quarry-revision --dry-run", _approver));
+            Assert.AreEqual("succeeded: approved Quarry-revision at " + originalPath,
+                Text("core approve asset:Quarry-revision", _approver));
+            Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(originalPath));
+            Assert.IsNull(quarry.material);
+            Assert.IsNull(AssetDatabase.LoadMainAssetAtPath(revisionPath));
+        }
+
+        private FixtureReferencingDefinition Quarry() {
+            var content = _folder.Subfolder("Content");
+            var granite = _folder.Create("Granite", "granite", 1, content);
+            var pebble = DefinitionDrafts.Create<FixtureDefinition>("Pebble", definition => definition.title = "pebble",
+                _settings);
+            var plain = ScriptableObject.CreateInstance<OperationSettings>();
+            AssetDatabase.CreateAsset(plain, content + "/Plain.asset");
+            var quarry = ScriptableObject.CreateInstance<FixtureReferencingDefinition>();
+            quarry.material = granite;
+            quarry.extras.Add(plain);
+            quarry.extras.Add(pebble.Asset);
+            quarry.extras.Add(granite);
+            AssetDatabase.CreateAsset(quarry, content + "/Quarry.asset");
+            AssetDatabase.SaveAssets();
+            return quarry;
+        }
+
+        private static string Saved(string path) {
+            return System.IO.File.GetLastWriteTime(path)
+                .ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 }

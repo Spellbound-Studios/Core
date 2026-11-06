@@ -17,12 +17,19 @@ namespace Spellbound.Core.Authoring.Editor {
         public const string NotRunText = "Validation: not run yet";
 
         private static readonly HashSet<string> Pending = new HashSet<string>(StringComparer.Ordinal);
+        private static BannerSchedule _schedule;
 
         static DefinitionInspectorBanner() {
             Selection.selectionChanged += Refresh;
             DefinitionReportCache.Changed += _ => Refresh();
+            ObjectChangeEvents.changesPublished += NoteChanges;
+            EditorApplication.update += RunWhenStill;
             EditorApplication.delayCall += Refresh;
         }
+
+        private static BannerSchedule Schedule => _schedule ??= new BannerSchedule(
+            ValidationSession.Settings.stillnessDelayMilliseconds, ValidationSession.Settings.checkBudgetMilliseconds,
+            ValidationSession.DemotionsSessionKey);
 
         public static void Refresh() {
             var asset = Selection.activeObject as ScriptableObject;
@@ -66,7 +73,7 @@ namespace Spellbound.Core.Authoring.Editor {
             var expanded = banner.Q<ReportView>() is { Compact: false };
             banner.Clear();
             var header = new HeaderBar(NotRunText);
-            header.Add(new Button(() => Run(asset)) { text = RunChecksText });
+            header.Add(new Button(() => RunChecks(asset)) { text = RunChecksText });
             banner.Add(header);
 
             if (!DefinitionReportCache.TryGet(path, out var run)) {
@@ -75,8 +82,10 @@ namespace Spellbound.Core.Authoring.Editor {
             }
 
             header.Title = "Validation at " + run.Finished.ToString("HH:mm:ss");
+            var shown = run.Annotated(Schedule);
+            header.Sentence = shown.CheckNotes();
             var view = new ReportView { Compact = !expanded };
-            view.Bind(run);
+            view.Bind(shown);
             banner.Add(view);
         }
 
@@ -89,17 +98,55 @@ namespace Spellbound.Core.Authoring.Editor {
                 Pending.Remove(path);
 
                 if (asset != null) {
-                    Run(asset);
+                    RunChecks(asset);
                 }
             };
         }
 
-        private static void Run(ScriptableObject asset) {
-            if (asset == null) {
+        private static void NoteChanges(ref ObjectChangeEventStream stream) {
+            var asset = Selection.activeObject as ScriptableObject;
+            var path = asset != null ? AssetDatabase.GetAssetPath(asset) : null;
+
+            if (string.IsNullOrEmpty(path) || !DefinitionAssets.IsDefinition(asset)) {
                 return;
             }
 
-            new DefinitionValidationRunner().ValidateAsset(asset);
+            var guid = AssetDatabase.GUIDFromAssetPath(path);
+
+            for (var index = 0; index < stream.length; index++) {
+                if (stream.GetEventType(index) != ObjectChangeKind.ChangeAssetObjectProperties) {
+                    continue;
+                }
+
+                stream.GetChangeAssetObjectPropertiesEvent(index, out var change);
+
+                if (change.guid == guid) {
+                    Schedule.Changed(path, DateTime.Now);
+                    return;
+                }
+            }
+        }
+
+        private static void RunWhenStill() {
+            if (_schedule == null || !_schedule.IsWaiting) {
+                return;
+            }
+
+            var path = _schedule.Due(DateTime.Now);
+            var asset = path != null ? AssetDatabase.LoadMainAssetAtPath(path) as ScriptableObject : null;
+
+            if (DefinitionAssets.IsDefinition(asset)) {
+                Runner().ValidateAsset(asset, ValidationScope.Editing(_schedule, _schedule.ChangedAt(path)));
+            }
+        }
+
+        public static ValidationRun RunChecks(ScriptableObject asset) {
+            return asset == null ? null : Runner().ValidateAsset(asset);
+        }
+
+        private static DefinitionValidationRunner Runner() {
+            return new DefinitionValidationRunner(null, ValidationSession.BannerObservations,
+                ValidationSession.Settings);
         }
 
         private static VisualElement Host(VisualElement root) {

@@ -29,18 +29,18 @@ A package declares what it is once, in the `Identity.asset` at its root, a `Pack
 
 An editor window or inspector takes the installed look with `EditorLook.Dress(root)`: the theme class, Core's layout sheet, every sheet a package registered through `EditorLook.Register(LookSource)` and the project's own from an `EditorLookSettings` asset. Core ships no theme; a `HeaderBar` shows one of the `HeaderStates`, and `ButtonVariants` and `ChipTones` name the shared classes a look styles. A look or project rule is scoped under `.sb-theme`, so it wins over Core's layout sheet.
 
-<!-- spellbound:operations a693157a -->
+<!-- spellbound:operations 0df55cd9 -->
 com.spellboundstudios.core
 Operations of the group `core`, run as `<group> <operation> [arguments]`:
 - `core about`: Describes this process: the Unity version, the render pipeline and the operation groups it holds. [reads, anyone]
-- `core approve --target <scriptable-object> --to <text>`: Moves a draft out of the drafts folder into the project, keeping its GUID; refused while the draft has an error finding. [writes, approver]
+- `core approve --target <scriptable-object> [--to <text>]`: Moves a draft out of the drafts folder into the project, keeping its GUID, or writes a revision over its original; refused while the draft has an error finding. [writes, approver]
   - `--target`: The draft, as asset:<path> or asset:<name>.
-  - `--to`: The folder under Assets the approved asset moves to.
+  - `--to`: The folder under Assets the approved asset moves to; a revision takes none. Default: none.
 - `core context [--package <text>]`: Lists the installed Spellbound packages with their front doors and operations, or prints one package's agent context with its generated blocks refreshed. [reads, anyone]
   - `--package`: The operation group or package id to print in full; leave it out to list every package. Default: none.
 - `core context-install --target <one of Skill, Agents, Claude>`: Writes the stub that tells an agent how to reach the installed packages: a skill file, or a block in the project's AGENTS.md or CLAUDE.md. [writes, developer]
   - `--target`: Skill writes .claude/skills/spellbound/SKILL.md; Agents and Claude write one delimited block into AGENTS.md or CLAUDE.md at the project root.
-- `core drafts`: Lists the definitions waiting in the drafts folder with the state of their report. [reads, developer]
+- `core drafts`: Lists the definitions waiting in the drafts folder with the state of their report, when each was saved, and for a revision its original and when that was saved. [reads, developer]
 - `core help [--group <text>] [--all <true or false> = false]`: Lists the operation groups, or the operations of one group with their arguments. [reads, anyone]
   - `--group`: The group to list; leave it out to list every group. Default: none.
   - `--all`: True to list every operation of every group. Default: false.
@@ -56,6 +56,8 @@ Operations of the group `core`, run as `<group> <operation> [arguments]`:
   - `--prefix`: Only the keys that start with this text. Default: none.
 - `core preview --target <scriptable-object>`: Describes an authored definition: its previewer's summary and pictures, and the lines every registered check contributes. [reads, anyone]
   - `--target`: The definition asset, as asset:<path> or asset:<name>.
+- `core revise --target <scriptable-object>`: Copies an approved definition into the drafts folder as <name>-revision and names the definitions it references; approving the revision writes it over the original and keeps its GUID. [writes, developer]
+  - `--target`: The approved definition, as asset:<path> or asset:<name>.
 - `core stats`: Lists each operation this host has run with its calls, failures and durations in milliseconds. [reads, developer]
 - `core unity-ledger [--move-form <true or false> = false]`: Checks every ledger of Unity systems the installed packages and this project rest on: a row whose type contradicts its verdict is wrong, a row whose editor or watched package moved past its judgement is stale, with the changelog lines that carry a watch word. [reads, anyone]
   - `--move-form`: True to print the lines for the Move issue form instead of the report. Default: false.
@@ -106,9 +108,9 @@ The binding rules are the line text at https://github.com/Spellbound-Studios/.gi
 
 ## Gaps
 
-- `core revise` and the authored-key scan (`core.unknown-key`) are not built yet; a draft is made new, and a renamed field is re-authored.
-- The inspector banner shows a definition's last report and runs the full set on a save or from its button; it does not yet revalidate while a person edits.
-- Validation timings stay on the run (`core validate --timings`); they are not yet reported as costs.
+- `core revise` copies one definition with its own fields: a definition it references is revised on its own, and an asset with sub-assets is refused. The authored-key scan reports a stored key the type no longer has (`core.unknown-key`) and maps or converts nothing, so a renamed field is re-authored under its new name.
+- The inspector banner runs every check on a save or from its button, and while a person edits it waits until the definition is still for `OperationSettings.stillnessDelayMilliseconds`, then runs only the definition's own validation, the authored-key scan and the checks that run while editing, carries every other check with the time it ran (marked stale when the asset changed since), and moves a check that takes longer than `OperationSettings.checkBudgetMilliseconds` to the saved path for the editor session.
+- Validation timings are on the run (`core validate --timings`, the authored-key scan included), and each check's last run is a gauge `<prefix>.validate_milliseconds` in the caller's observation context, the banner's in `core.definition-banner` with the check budget as its budget; they are not reported as costs.
 - The flight recorder, guards with a policy, the native queue for jobs, the profiler mirror and the key validator's checks are not built yet; an occurrence only counts (its tick and subject are taken and not kept until the recorder exists), and a packed snapshot of a context's readings does not exist.
 - A line captured from Unity's own log (`UnityLogCapture`) reaches `CallSiteLogSink` with the source `Unity`, the log type as its member and line 0, so every `Debug.Log` from anywhere counts under one call site per log type.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
