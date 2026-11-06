@@ -5,7 +5,6 @@ using System;
 namespace Spellbound.Core.Console {
     /// <summary>
     /// Marks a static method as a console utility command that can be invoked directly from the console.
-    /// This attribute does not require a presetID and can be added to any static method.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, Inherited = false)]
     public class ConsoleUtilityCommandAttribute : Attribute {

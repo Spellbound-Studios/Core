@@ -3,7 +3,6 @@
     "rootNamespace": "",
     "references": [
         "Spellbound.Core",
-        "Spellbound.Core.WorldObjects",
         "Spellbound.Core.Console",
         "Spellbound.Core.Editor",
         "Spellbound.Fixture.Other",
@@ -13,9 +12,7 @@
         "Spellbound.Core.Testing",
         "Unity.Burst",
         "Unity.Collections",
-        "Unity.Entities",
         "Unity.Mathematics",
-        "Unity.Transforms",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

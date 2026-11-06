@@ -3,7 +3,6 @@
     "rootNamespace": "",
     "references": [
         "Spellbound.Core",
-        "Spellbound.Core.WorldObjects",
         "Unity.TextMeshPro",
         "Unity.InputSystem",
         "UnityEngine.UI"

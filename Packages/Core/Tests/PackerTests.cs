@@ -534,17 +534,6 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
-        public void TransformDataRoundTrips() {
-            var data = new TransformData(new Vector3(10f, 20f, 30f), new Vector3(0f, 90f, 45f), 2.5f);
-
-            var result = Packer.FromBytes<TransformData>(Packer.ToBytes(data));
-
-            Assert.AreEqual(data.Position, result.Position);
-            Assert.AreEqual(data.Rotation, result.Rotation);
-            Assert.AreEqual(data.Scale, result.Scale);
-        }
-
-        [Test]
         public void SmartToBytesTagsThePayloadAndUnpacksBack() {
             var bytes = Packer.SmartToBytes(new CounterState { Count = 42 });
 

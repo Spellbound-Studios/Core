@@ -12,21 +12,5 @@ namespace Spellbound.Core.Console {
         public MethodInfo Method { get; set; }
         public Type DeclaringClass { get; set; }
         public string Description { get; set; }
-
-        /// <summary>
-        /// The module type required for preset commands.
-        /// Null for utility commands.
-        /// </summary>
-        public Type RequiredModuleType { get; set; }
-
-        /// <summary>
-        /// True if this is a utility command (no module requirement).
-        /// </summary>
-        public bool IsUtilityCommand => RequiredModuleType == null;
-
-        /// <summary>
-        /// True if this is a preset command (requires a specific module).
-        /// </summary>
-        public bool IsPresetCommand => RequiredModuleType != null;
     }
 }
