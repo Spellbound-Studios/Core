@@ -27,6 +27,18 @@ namespace Spellbound.Core.Authoring.Editor {
             return label;
         }
 
+        internal static string OfAssemblyName(string assemblyName) {
+            if (string.IsNullOrEmpty(assemblyName)
+                || !assemblyName.StartsWith(StudioPrefix, StringComparison.Ordinal)
+                || assemblyName.Length == StudioPrefix.Length) {
+                return null;
+            }
+
+            var remainder = assemblyName.Substring(StudioPrefix.Length);
+            var dot = remainder.IndexOf('.');
+            return dot < 0 ? remainder : remainder.Substring(0, dot);
+        }
+
         public static string OwnValidation(Type definitionType) {
             return definitionType.Name + " (" + Of(definitionType) + ")";
         }

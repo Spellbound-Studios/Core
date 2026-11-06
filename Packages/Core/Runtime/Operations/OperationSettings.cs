@@ -18,6 +18,8 @@ namespace Spellbound.Core.Operations {
         public string draftsFolder = DefaultDraftsFolder;
         public string ledgerFolder = DefaultLedgerFolder;
         public int stillnessDelayMilliseconds = 400;
+        public int checkBudgetMilliseconds = 50;
+        public int maximumStoredValueLength = 80;
 
         public static OperationSettings Load() {
             var loaded = Resources.Load<OperationSettings>(ResourceName);

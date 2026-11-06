@@ -1,6 +1,7 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
 using System.Collections.Generic;
+using Spellbound.Core.Observations;
 using UnityEditor;
 using UnityEngine;
 
@@ -33,7 +34,7 @@ namespace Spellbound.Core.Authoring.Editor {
         }
 
         private static void Revalidate(IReadOnlyList<string> paths) {
-            var runner = new DefinitionValidationRunner();
+            var runner = new DefinitionValidationRunner(null, ObservationContext.Discard, ValidationSession.Settings);
 
             foreach (var path in paths) {
                 var asset = AssetDatabase.LoadMainAssetAtPath(path) as ScriptableObject;

@@ -7,11 +7,16 @@ namespace Spellbound.Core.Authoring.Editor {
         public ScriptableObject Asset { get; }
         public string Path { get; }
         public ValidationRun Run { get; }
+        public bool IsRevision { get; }
+        public string OriginalPath { get; }
 
-        public Draft(ScriptableObject asset, string path, ValidationRun run) {
+        public Draft(ScriptableObject asset, string path, ValidationRun run, bool isRevision = false,
+            string originalPath = null) {
             Asset = asset;
             Path = path;
             Run = run;
+            IsRevision = isRevision;
+            OriginalPath = originalPath;
         }
     }
 

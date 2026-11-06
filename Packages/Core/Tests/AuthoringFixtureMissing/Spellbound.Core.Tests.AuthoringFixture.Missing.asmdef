@@ -1,0 +1,19 @@
+{
+    "name": "Spellbound.Core.Tests.AuthoringFixture.Missing",
+    "rootNamespace": "",
+    "references": [
+        "Spellbound.Core",
+        "Spellbound.Core.Tests.AuthoringFixture"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
