@@ -1,0 +1,22 @@
+{
+    "name": "Spellbound.Core.Tests.AuthoringFixture.Check",
+    "rootNamespace": "",
+    "references": [
+        "Spellbound.Core",
+        "Spellbound.Core.Editor",
+        "Spellbound.Core.Tests.AuthoringFixture"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

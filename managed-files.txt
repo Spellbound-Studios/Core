@@ -1,0 +1,15 @@
+.githooks/commit-msg
+.github/workflows/pull-request.yml
+.github/workflows/release.yml
+scripts/adopt-repository.sh
+scripts/check-commit-message.sh
+scripts/setup.sh
+.editorconfig
+.gitattributes
+.gitignore
+.releaserc.yaml
+CODEOWNERS
+AGENTS.md
+line-text-address.txt
+managed-files.txt
+managed-unity-packages.txt
