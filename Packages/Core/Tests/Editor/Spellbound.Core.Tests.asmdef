@@ -8,6 +8,7 @@
         "Spellbound.Fixture.Other",
         "Spellbound.Core.Tests.OperationFixture",
         "Spellbound.Core.Tests.OperationFixture.Second",
+        "Spellbound.Core.Tests.PlaySessionFixture",
         "Spellbound.Core.Tests.AuthoringFixture",
         "Spellbound.Core.Testing",
         "Unity.Burst",
