@@ -14,6 +14,13 @@
         "com.unity.ugui": "2.0.0"
       }
     },
+    "com.spellboundstudios.packagecheck": {
+      "version": "https://github.com/Spellbound-Studios/PackageCheck.git?path=/Packages/PackageCheck#beta",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "2509db49ce59d2780b6cdf4855f2506ff5cb0e07"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.12",
       "depth": 0,

@@ -9,6 +9,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "Unity",
+            "expression": "6000.4.8",
+            "define": "SPELLBOUND_CORE_UNITY_LISTS_ASSEMBLIES"
+        }
+    ],
     "noEngineReferences": false
 }

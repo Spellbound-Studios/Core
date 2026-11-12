@@ -64,7 +64,9 @@ namespace Spellbound.Core.Logging {
                 _writerThread.Start();
 
                 Application.quitting += OnApplicationQuitting;
-                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.quitting += OnApplicationQuitting;
+#endif
 
                 _initialized = true;
             }
@@ -156,7 +158,6 @@ namespace Spellbound.Core.Logging {
         }
 
         private void OnApplicationQuitting() => Dispose();
-        private void OnProcessExit(object sender, EventArgs e) => Dispose();
 
         public void Dispose() {
             if (!_initialized)
@@ -165,7 +166,9 @@ namespace Spellbound.Core.Logging {
             _initialized = false;
 
             Application.quitting -= OnApplicationQuitting;
-            AppDomain.CurrentDomain.ProcessExit -= OnProcessExit;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.quitting -= OnApplicationQuitting;
+#endif
 
             _shutdownCts.Cancel();
             _signal.Set();

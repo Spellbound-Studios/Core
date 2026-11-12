@@ -7,10 +7,18 @@ using System.Reflection;
 namespace Spellbound.Core.Tooling {
     public static class AssemblyScanning {
         public static IEnumerable<Assembly> ScannableAssemblies() {
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+            foreach (var assembly in LoadedAssemblies()) {
                 if (!IsSkipped(assembly.GetName().Name))
                     yield return assembly;
             }
+        }
+
+        private static IReadOnlyList<Assembly> LoadedAssemblies() {
+#if SPELLBOUND_CORE_UNITY_LISTS_ASSEMBLIES
+            return UnityEngine.Assemblies.CurrentAssemblies.GetLoadedAssemblies();
+#else
+            return AppDomain.CurrentDomain.GetAssemblies();
+#endif
         }
 
         public static IReadOnlyList<Type> LoadableTypes(Assembly assembly) {

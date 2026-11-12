@@ -72,6 +72,8 @@ namespace Spellbound.Core.Packing {
 
         #region API
 
+        internal static IReadOnlyList<ISmartPacker> Registered => Registry.All;
+
         public static uint GetHash(Type type) {
             EnsureLoaded();
 
