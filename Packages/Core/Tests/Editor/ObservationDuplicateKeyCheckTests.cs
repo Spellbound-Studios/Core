@@ -76,6 +76,13 @@ namespace Spellbound.Core.Tests {
         }
 
         [Test]
+        public void ACostKeyWithABudgetAndAQualityLevelReportsNothing() {
+            NameEveryDeclaredKeyOnce();
+            _settings.qualityLevels.Add(new ObservationQualityLevelOverride { key = "test.cost.frame", level = 2 });
+            Assert.IsTrue(Checked().IsEmpty, Checked().ToText());
+        }
+
+        [Test]
         public void AKeyNamedTwiceAcrossTheListsIsAnError() {
             NameEveryDeclaredKeyOnce();
             _settings.qualityLevels.Add(new ObservationQualityLevelOverride { key = "test.guard.up", level = 1 });

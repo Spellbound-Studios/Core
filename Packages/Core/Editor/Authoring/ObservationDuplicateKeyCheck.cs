@@ -31,23 +31,28 @@ namespace Spellbound.Core.Authoring.Editor {
 
             var declared = _declarations() ?? Array.Empty<ObservationDeclaration>();
             var byName = DeclarationsByName(declared);
-            var firstList = new Dictionary<string, string>(StringComparer.Ordinal);
+            var listsByKey = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
             foreach (var (list, text) in NamedKeys(definition)) {
                 if (!ObservationKey.TryParse(text, out var key, out _)) {
                     continue;
                 }
 
-                if (firstList.TryGetValue(key.Name, out var first)) {
-                    var where = string.Equals(first, list, StringComparison.Ordinal)
+                if (listsByKey.TryGetValue(key.Name, out var lists)) {
+                    if (SetsTheOtherCostDefault(lists, list)) {
+                        lists.Add(list);
+                        continue;
+                    }
+
+                    var where = lists.Contains(list)
                         ? "twice in " + list
-                        : "in " + first + " and again in " + list;
+                        : "in " + lists[0] + " and again in " + list;
                     report.Error(DuplicateKeyCode, "The key '" + key + "' is named " + where + ".", list,
                         "Keep one entry for '" + key + "'.");
                     continue;
                 }
 
-                firstList.Add(key.Name, list);
+                listsByKey.Add(key.Name, new List<string> { list });
 
                 if (!byName.ContainsKey(key.Name)) {
                     report.Warning(KeyUndeclaredCode, "No package declares the key '" + key + "'.", list,
@@ -86,6 +91,16 @@ namespace Spellbound.Core.Authoring.Editor {
             }
 
             return lines;
+        }
+
+        private static bool SetsTheOtherCostDefault(List<string> lists, string list) {
+            return lists.Count == 1 && !string.Equals(lists[0], list, StringComparison.Ordinal)
+                && IsCostDefaultList(lists[0]) && IsCostDefaultList(list);
+        }
+
+        private static bool IsCostDefaultList(string list) {
+            return string.Equals(list, nameof(ObservationSettings.budgets), StringComparison.Ordinal)
+                || string.Equals(list, nameof(ObservationSettings.qualityLevels), StringComparison.Ordinal);
         }
 
         private static void ReportDeclaredTwice(IReadOnlyList<ObservationDeclaration> declared,
