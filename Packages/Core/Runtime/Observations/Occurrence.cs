@@ -21,6 +21,28 @@ namespace Spellbound.Core.Observations {
             context.RecordOccurrence(Declaration);
         }
 
+        public void Record(ObservationContext context, Tick tick, ulong subject, ulong value) {
+            if (context == null) {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            throw new NotImplementedException();
+        }
+
+        public void Record(ObservationContext context, Tick tick, ulong subject, ReadOnlySpan<uint> values) {
+            if (context == null) {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            if (values.Length > RecordedOccurrence.MaximumValues) {
+                throw new ArgumentException(
+                    "An occurrence records at most " + RecordedOccurrence.MaximumValues + " values; "
+                    + values.Length + " were given.", nameof(values));
+            }
+
+            throw new NotImplementedException();
+        }
+
         public override string ToString() => Declaration.ToString();
     }
 }

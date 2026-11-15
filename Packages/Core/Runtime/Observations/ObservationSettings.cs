@@ -7,8 +7,13 @@ using UnityEngine;
 namespace Spellbound.Core.Observations {
     [CreateAssetMenu(menuName = "Spellbound/Observation Settings", fileName = "ObservationSettings")]
     public sealed class ObservationSettings : ScriptableObject {
+        public static readonly int DefaultRecorderCells = 32768;
+
         public List<ObservationBudgetOverride> budgets = new List<ObservationBudgetOverride>();
         public List<ObservationQualityLevelOverride> qualityLevels = new List<ObservationQualityLevelOverride>();
+        public int recorderCells = DefaultRecorderCells;
+        public List<ObservationRateCap> rateCaps = new List<ObservationRateCap>();
+        public List<ObservationGuardPolicyOverride> guardPolicies = new List<ObservationGuardPolicyOverride>();
 
         internal void ApplyTo(ObservationContext context) {
             if (budgets != null) {

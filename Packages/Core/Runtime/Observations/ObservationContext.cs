@@ -7,6 +7,7 @@ using Spellbound.Core.Simulation;
 namespace Spellbound.Core.Observations {
     public sealed class ObservationContext : IDisposable {
         internal const string DiscardName = "discard";
+        internal static readonly TickRate DefaultRate = TickRate.PerSecond(50);
 
         private readonly Dictionary<uint, ObservationSlot> _slotsByKey = new Dictionary<uint, ObservationSlot>();
         private readonly List<ObservationSlot> _slots = new List<ObservationSlot>();
@@ -14,16 +15,20 @@ namespace Spellbound.Core.Observations {
             new Dictionary<string, uint>(StringComparer.Ordinal);
         private bool _disposed;
 
-        internal ObservationContext(string name, bool isDiscard) {
+        internal ObservationContext(string name, bool isDiscard, TickRate rate) {
             Name = name;
             IsDiscard = isDiscard;
+            Rate = rate;
         }
 
-        public static ObservationContext Discard { get; } = new ObservationContext(DiscardName, true);
+        public static ObservationContext Discard { get; } =
+            new ObservationContext(DiscardName, true, DefaultRate);
 
         public string Name { get; }
 
         public bool IsDiscard { get; }
+
+        public TickRate Rate { get; }
 
         public bool IsDisposed => _disposed;
 
