@@ -39,6 +39,33 @@ namespace Spellbound.Core.Observations {
                 }
             }
 
+            if (recorderCells < 1) {
+                Log.Error(name + ": recorderCells is " + recorderCells
+                          + "; a flight recorder needs at least one cell, so the default of "
+                          + DefaultRecorderCells + " is kept.");
+            }
+            else {
+                context.SetRecorderCells(recorderCells);
+            }
+
+            if (rateCaps != null) {
+                foreach (var entry in rateCaps) {
+                    if (!ObservationKey.TryParse(entry.key, out var key, out var error)) {
+                        Log.Error(name + ": a rate cap is skipped. " + error);
+                        continue;
+                    }
+
+                    if (double.IsNaN(entry.recordsPerSecond) || double.IsInfinity(entry.recordsPerSecond)
+                        || entry.recordsPerSecond < 0) {
+                        Log.Error(name + ": the rate cap of '" + key + "' is " + entry.recordsPerSecond
+                                  + " records a second; a cap is finite and zero or more, so it is skipped.");
+                        continue;
+                    }
+
+                    context.SetRateCap(key, entry.recordsPerSecond);
+                }
+            }
+
             if (guardPolicies != null) {
                 foreach (var entry in guardPolicies) {
                     if (!ObservationKey.TryParse(entry.key, out var key, out var error)) {

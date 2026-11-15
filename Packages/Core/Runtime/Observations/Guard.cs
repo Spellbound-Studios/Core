@@ -79,6 +79,8 @@ namespace Spellbound.Core.Observations {
             context.RecordOccurrence(Declaration);
 
             if (state.RepairCount >= ticks.Repairs) {
+                var from = tick.Value > ticks.Window.Steps ? new Tick(tick.Value - ticks.Window.Steps) : Tick.Zero;
+                context.FlagWindow(from, tick);
                 state.HoldUntil = tick.Plus(ticks.Hold);
                 context.SetGuardState(state);
                 return GuardVerdict.Hold;

@@ -18,6 +18,11 @@ namespace Spellbound.Core.Observations {
         private readonly Dictionary<uint, (int Repairs, TickSpan Window, TickSpan Hold)> _guardTicks =
             new Dictionary<uint, (int Repairs, TickSpan Window, TickSpan Hold)>();
         private readonly Dictionary<uint, GuardPolicyValues> _guardPolicies = new Dictionary<uint, GuardPolicyValues>();
+        private readonly Dictionary<uint, (double RecordsPerSecond, double Credit, ulong LastTick,
+            ObservationReason Reason)> _rateCaps =
+            new Dictionary<uint, (double RecordsPerSecond, double Credit, ulong LastTick, ObservationReason Reason)>();
+        private int _recorderCells = ObservationSettings.DefaultRecorderCells;
+        private FlightRecorder _recorder;
         private bool _disposed;
 
         internal ObservationContext(string name, bool isDiscard, TickRate rate) {
@@ -38,6 +43,18 @@ namespace Spellbound.Core.Observations {
         public bool IsDisposed => _disposed;
 
         internal int GuardEntryCount => _guardStates.Count;
+
+        internal FlightRecorder Recorder {
+            get {
+                if (_recorder == null && !IsDiscard && !_disposed) {
+                    _recorder = new FlightRecorder(_recorderCells);
+                }
+
+                return _recorder;
+            }
+        }
+
+        internal int RecordCount => _recorder?.Count ?? 0;
 
         public int Read(List<ObservationReading> readings) {
             return Read(null, readings);
@@ -79,6 +96,19 @@ namespace Spellbound.Core.Observations {
 
             reading = default;
             return false;
+        }
+
+        public int ReadRecords(List<RecordedOccurrence> records) {
+            if (records == null) {
+                throw new ArgumentNullException(nameof(records));
+            }
+
+            if (_recorder == null) {
+                records.Clear();
+                return 0;
+            }
+
+            return _recorder.Read(records);
         }
 
         public int ReadReasons(ObservationKey key, List<ReasonCount> reasons) {
@@ -160,6 +190,12 @@ namespace Spellbound.Core.Observations {
             }
 
             _disposed = true;
+
+            if (_recorder != null) {
+                _recorder.Dispose();
+                _recorder = null;
+            }
+
             ObservationContexts.Remove(this);
         }
 
@@ -205,6 +241,47 @@ namespace Spellbound.Core.Observations {
             _guardTicks.Remove(key.Hash);
         }
 
+        internal void SetRecorderCells(int cells) {
+            if (cells < 1) {
+                throw new ArgumentOutOfRangeException(nameof(cells), cells,
+                    "A flight recorder needs at least one cell.");
+            }
+
+            if (IsDiscard || cells == _recorderCells) {
+                return;
+            }
+
+            _recorderCells = cells;
+
+            if (_recorder != null) {
+                _recorder.Dispose();
+                _recorder = null;
+            }
+        }
+
+        internal void SetRateCap(ObservationKey key, double recordsPerSecond) {
+            if (double.IsNaN(recordsPerSecond) || double.IsInfinity(recordsPerSecond) || recordsPerSecond < 0) {
+                throw new ArgumentOutOfRangeException(nameof(recordsPerSecond), recordsPerSecond,
+                    "A rate cap is a finite number of records a second, zero or more.");
+            }
+
+            if (IsDiscard) {
+                return;
+            }
+
+            if (recordsPerSecond == 0) {
+                _rateCaps.Remove(key.Hash);
+                return;
+            }
+
+            _rateCaps[key.Hash] = (recordsPerSecond, RateCapBurst(recordsPerSecond), 0UL,
+                ObservationReasons.Register(key.Name));
+        }
+
+        internal void FlagWindow(Tick from, Tick to) {
+            _recorder?.FlagWindow(from, to);
+        }
+
         internal (int Repairs, TickSpan Window, TickSpan Hold) GuardTicks(Guard guard) {
             var hash = guard.Key.Hash;
 
@@ -245,6 +322,29 @@ namespace Spellbound.Core.Observations {
             slot.Total = slot.Count;
             slot.Peak = slot.Count;
             Bump(slot);
+        }
+
+        internal void RecordOccurrence(ObservationDeclaration declaration, Tick tick, ulong subject,
+            ReadOnlySpan<uint> values) {
+            if (IsDiscard) {
+                return;
+            }
+
+            if (values.Length > RecordedOccurrence.MaximumValues) {
+                throw new ArgumentException(
+                    "An occurrence records at most " + RecordedOccurrence.MaximumValues + " values; "
+                    + values.Length + " were given.", nameof(values));
+            }
+
+            if (!declaration.IsGuard) {
+                RecordOccurrence(declaration);
+            }
+
+            if (_disposed || OverRateCap(declaration.Key.Hash, tick)) {
+                return;
+            }
+
+            Recorder.Write(declaration.Key.Hash, tick, subject, values);
         }
 
         internal void SetGauge(ObservationDeclaration declaration, double value) {
@@ -307,6 +407,33 @@ namespace Spellbound.Core.Observations {
 
             return slot;
         }
+
+        private bool OverRateCap(uint keyHash, Tick tick) {
+            if (!_rateCaps.TryGetValue(keyHash, out var cap)) {
+                return false;
+            }
+
+            var credit = cap.Credit;
+
+            if (tick.Value > cap.LastTick) {
+                credit = Math.Min(RateCapBurst(cap.RecordsPerSecond),
+                    credit + (tick.Value - cap.LastTick) * cap.RecordsPerSecond);
+                cap.LastTick = tick.Value;
+            }
+
+            if (credit >= Rate.TicksPerSecond) {
+                cap.Credit = credit - Rate.TicksPerSecond;
+                _rateCaps[keyHash] = cap;
+                return false;
+            }
+
+            cap.Credit = credit;
+            _rateCaps[keyHash] = cap;
+            AddCount(CoreObservations.RecorderDropped.Declaration, cap.Reason, 1);
+            return true;
+        }
+
+        private double RateCapBurst(double recordsPerSecond) => Math.Max(Rate.TicksPerSecond, recordsPerSecond);
 
         private void Bump(ObservationSlot slot) {
             slot.Version++;

@@ -18,7 +18,7 @@ namespace Spellbound.Core.Observations {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            context.RecordOccurrence(Declaration);
+            context.RecordOccurrence(Declaration, tick, subject, ReadOnlySpan<uint>.Empty);
         }
 
         public void Record(ObservationContext context, Tick tick, ulong subject, ulong value) {
@@ -26,7 +26,14 @@ namespace Spellbound.Core.Observations {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            throw new NotImplementedException();
+            if (context.IsDiscard) {
+                return;
+            }
+
+            Span<uint> values = stackalloc uint[2];
+            values[0] = (uint)value;
+            values[1] = (uint)(value >> 32);
+            context.RecordOccurrence(Declaration, tick, subject, values);
         }
 
         public void Record(ObservationContext context, Tick tick, ulong subject, ReadOnlySpan<uint> values) {
@@ -40,7 +47,7 @@ namespace Spellbound.Core.Observations {
                     + values.Length + " were given.", nameof(values));
             }
 
-            throw new NotImplementedException();
+            context.RecordOccurrence(Declaration, tick, subject, values);
         }
 
         public override string ToString() => Declaration.ToString();
