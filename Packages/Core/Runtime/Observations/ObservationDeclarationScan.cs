@@ -99,6 +99,9 @@ namespace Spellbound.Core.Observations {
                 case Cost cost:
                     ObservationRegistry.Ensure(cost.Declaration);
                     break;
+                case Guard guard:
+                    ObservationRegistry.Ensure(guard.Declaration);
+                    break;
             }
         }
 
@@ -132,7 +135,7 @@ namespace Spellbound.Core.Observations {
 
         private static bool IsDeclaredType(Type fieldType) {
             return fieldType == typeof(Counter) || fieldType == typeof(Occurrence) || fieldType == typeof(Gauge)
-                   || fieldType == typeof(Cost);
+                   || fieldType == typeof(Cost) || fieldType == typeof(Guard);
         }
     }
 }

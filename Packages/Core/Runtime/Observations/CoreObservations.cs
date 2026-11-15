@@ -26,6 +26,18 @@ namespace Spellbound.Core.Observations {
             "core.intent.windows_dropped",
             "A departed actor's intent window was dropped once its grace had passed.");
 
+        public static readonly Guard ReferenceFrameUpVaries = CoreKit.Observations.Guard(
+            "core.reference_frame.up_varies",
+            "A check that needs one up across a reference frame was handed an up field that varies, a radial or"
+            + " sampled field, so the check refused it. The subject is the reference frame.");
+
+        public static readonly Counter RecorderDropped = CoreKit.Observations.Counter("core.recorder.dropped",
+            "An occurrence came faster than its key's rate cap, so the flight recorder dropped it."
+            + " The reason is the key.");
+
+        public static readonly Counter QueueDropped = CoreKit.Observations.Counter("core.queue.dropped",
+            "A job wrote into a native queue that was full, so the write was dropped.");
+
         public static readonly Counter LogVerbose = CoreKit.Observations.Counter("core.log.verbose",
             "A line was logged at the Verbose level. The reason is the call site.");
 

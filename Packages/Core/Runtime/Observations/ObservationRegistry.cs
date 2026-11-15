@@ -12,24 +12,32 @@ namespace Spellbound.Core.Observations {
             new HashRegistry<ObservationDeclaration>();
 
         internal static Counter Counter(string key, string description) {
-            var declaration = Declare(key, ObservationKind.Counter, description, ObservationUnit.Count, double.NaN, 0);
+            var declaration = Declare(key, ObservationKind.Counter, description, ObservationUnit.Count, double.NaN, 0,
+                false);
             return new Counter(declaration);
+        }
+
+        internal static Guard Guard(string key, string description, GuardPolicyValues defaults) {
+            var declaration = Declare(key, ObservationKind.Counter, description, ObservationUnit.Count, double.NaN, 0,
+                true);
+            return new Guard(declaration, defaults);
         }
 
         internal static Occurrence Occurrence(string key, string description) {
             var declaration = Declare(key, ObservationKind.Occurrence, description, ObservationUnit.Count, double.NaN,
-                0);
+                0, false);
             return new Occurrence(declaration);
         }
 
         internal static Gauge Gauge(string key, string description, ObservationUnit unit) {
-            var declaration = Declare(key, ObservationKind.Gauge, description, unit, double.NaN, 0);
+            var declaration = Declare(key, ObservationKind.Gauge, description, unit, double.NaN, 0, false);
             return new Gauge(declaration);
         }
 
         internal static Cost Cost(string key, string description, ObservationUnit unit, double defaultBudget,
             int defaultQualityLevel) {
-            var declaration = Declare(key, ObservationKind.Cost, description, unit, defaultBudget, defaultQualityLevel);
+            var declaration = Declare(key, ObservationKind.Cost, description, unit, defaultBudget, defaultQualityLevel,
+                false);
             return new Cost(declaration);
         }
 
@@ -61,10 +69,10 @@ namespace Spellbound.Core.Observations {
 
         private static ObservationDeclaration Declare(string key, ObservationKind kind, string description,
             ObservationUnit unit,
-            double defaultBudget, int defaultQualityLevel) {
+            double defaultBudget, int defaultQualityLevel, bool isGuard) {
             var parsed = ObservationKey.Parse(key);
             var declaration = new ObservationDeclaration(parsed, kind, description, unit, defaultBudget,
-                defaultQualityLevel);
+                defaultQualityLevel, isGuard);
 
             if (Declarations.TryGet(parsed.Hash, out var existing)) {
                 if (existing.Matches(declaration)) {

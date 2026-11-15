@@ -11,6 +11,7 @@ namespace Spellbound.Core.Observations {
         public ObservationUnit Unit { get; }
         public double DefaultBudget { get; }
         public int DefaultQualityLevel { get; }
+        public bool IsGuard { get; }
 
         public bool HasDefaultBudget => !double.IsNaN(DefaultBudget);
 
@@ -18,7 +19,7 @@ namespace Spellbound.Core.Observations {
 
         internal ObservationDeclaration(ObservationKey key, ObservationKind kind, string description,
             ObservationUnit unit,
-            double defaultBudget, int defaultQualityLevel) {
+            double defaultBudget, int defaultQualityLevel, bool isGuard) {
             if (key.IsNone) {
                 throw new ArgumentException("An observation declaration needs a key.", nameof(key));
             }
@@ -36,6 +37,7 @@ namespace Spellbound.Core.Observations {
             Unit = unit;
             DefaultBudget = defaultBudget;
             DefaultQualityLevel = defaultQualityLevel;
+            IsGuard = isGuard;
         }
 
         internal bool Matches(ObservationDeclaration other) {
@@ -45,7 +47,8 @@ namespace Spellbound.Core.Observations {
                    && string.Equals(Description, other.Description, StringComparison.Ordinal)
                    && Unit == other.Unit
                    && DefaultBudget.Equals(other.DefaultBudget)
-                   && DefaultQualityLevel == other.DefaultQualityLevel;
+                   && DefaultQualityLevel == other.DefaultQualityLevel
+                   && IsGuard == other.IsGuard;
         }
 
         public override string ToString() => Key + " (" + Kind.ToString().ToLowerInvariant() + ", " + Unit + ")";

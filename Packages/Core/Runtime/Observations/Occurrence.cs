@@ -18,7 +18,36 @@ namespace Spellbound.Core.Observations {
                 throw new ArgumentNullException(nameof(context));
             }
 
-            context.RecordOccurrence(Declaration);
+            context.RecordOccurrence(Declaration, tick, subject, ReadOnlySpan<uint>.Empty);
+        }
+
+        public void Record(ObservationContext context, Tick tick, ulong subject, ulong value) {
+            if (context == null) {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            if (context.IsDiscard) {
+                return;
+            }
+
+            Span<uint> values = stackalloc uint[2];
+            values[0] = (uint)value;
+            values[1] = (uint)(value >> 32);
+            context.RecordOccurrence(Declaration, tick, subject, values);
+        }
+
+        public void Record(ObservationContext context, Tick tick, ulong subject, ReadOnlySpan<uint> values) {
+            if (context == null) {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            if (values.Length > RecordedOccurrence.MaximumValues) {
+                throw new ArgumentException(
+                    "An occurrence records at most " + RecordedOccurrence.MaximumValues + " values; "
+                    + values.Length + " were given.", nameof(values));
+            }
+
+            context.RecordOccurrence(Declaration, tick, subject, values);
         }
 
         public override string ToString() => Declaration.ToString();

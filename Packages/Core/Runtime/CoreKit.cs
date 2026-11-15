@@ -49,6 +49,14 @@ namespace Spellbound.Core {
             public static Counter Counter(string key, string description) =>
                 ObservationRegistry.Counter(key, description);
 
+            public static Guard Guard(string key, string description) =>
+                ObservationRegistry.Guard(key, description, GuardPolicyValues.Default);
+
+            public static Guard Guard(string key, string description, GuardPolicyValues defaults) =>
+                ObservationRegistry.Guard(key, description, defaults);
+
+            public static Guard FindGuard(ObservationKey key) => Spellbound.Core.Observations.Guard.Find(key);
+
             public static Occurrence Occurrence(string key, string description) =>
                 ObservationRegistry.Occurrence(key, description);
 
@@ -74,9 +82,14 @@ namespace Spellbound.Core {
 
             public static IReadOnlyList<ObservationDeclaration> Declared() => ObservationRegistry.Declared();
 
-            public static ObservationContext CreateContext(string name) => CreateContext(name, null);
+            public static ObservationContext CreateContext(string name) =>
+                CreateContext(name, null, ObservationContext.DefaultRate);
 
-            public static ObservationContext CreateContext(string name, ObservationSettings settings) {
+            public static ObservationContext CreateContext(string name, ObservationSettings settings) =>
+                CreateContext(name, settings, ObservationContext.DefaultRate);
+
+            public static ObservationContext CreateContext(string name, ObservationSettings settings,
+                TickRate rate) {
                 if (string.IsNullOrWhiteSpace(name)) {
                     throw new ArgumentException("An observation context needs a name: the world it belongs to.",
                         nameof(name));
@@ -95,7 +108,7 @@ namespace Spellbound.Core {
                                                 nameof(name));
                 }
 
-                var context = new ObservationContext(trimmed, false);
+                var context = new ObservationContext(trimmed, false, rate);
 
                 if (settings != null) {
                     settings.ApplyTo(context);
@@ -103,6 +116,14 @@ namespace Spellbound.Core {
 
                 ObservationContexts.Add(context);
                 return context;
+            }
+
+            public static ProfilerCounterMirror MirrorToProfiler(ObservationContext context) {
+                if (context == null) {
+                    throw new ArgumentNullException(nameof(context));
+                }
+
+                return new ProfilerCounterMirror(context);
             }
 
             public static int Compare(IReadOnlyList<ObservationReading> before, IReadOnlyList<ObservationReading> after,
