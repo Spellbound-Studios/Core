@@ -118,6 +118,14 @@ namespace Spellbound.Core {
                 return context;
             }
 
+            public static ProfilerCounterMirror MirrorToProfiler(ObservationContext context) {
+                if (context == null) {
+                    throw new ArgumentNullException(nameof(context));
+                }
+
+                return new ProfilerCounterMirror(context);
+            }
+
             public static int Compare(IReadOnlyList<ObservationReading> before, IReadOnlyList<ObservationReading> after,
                 List<ObservationRatio> ratios) {
                 if (before == null) {

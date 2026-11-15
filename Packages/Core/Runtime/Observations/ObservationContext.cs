@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using Spellbound.Core.Logging;
 using Spellbound.Core.Simulation;
 
 namespace Spellbound.Core.Observations {
@@ -21,6 +22,9 @@ namespace Spellbound.Core.Observations {
         private readonly Dictionary<uint, (double RecordsPerSecond, double Credit, ulong LastTick,
             ObservationReason Reason)> _rateCaps =
             new Dictionary<uint, (double RecordsPerSecond, double Credit, ulong LastTick, ObservationReason Reason)>();
+        private readonly Dictionary<uint, ObservationDeclaration> _queuedDeclarations =
+            new Dictionary<uint, ObservationDeclaration>();
+        private readonly HashSet<uint> _refusedQueuedKeys = new HashSet<uint>();
         private int _recorderCells = ObservationSettings.DefaultRecorderCells;
         private FlightRecorder _recorder;
         private bool _disposed;
@@ -182,6 +186,10 @@ namespace Spellbound.Core.Observations {
             slot.HasQualityLevelOverride = true;
             slot.QualityLevelOverride = level;
             Bump(slot);
+        }
+
+        public NativeObservationQueue CreateQueue(int capacity) {
+            return new NativeObservationQueue(this, capacity);
         }
 
         public void Dispose() {
@@ -347,6 +355,37 @@ namespace Spellbound.Core.Observations {
             Recorder.Write(declaration.Key.Hash, tick, subject, values);
         }
 
+        internal void ApplyQueued(in NativeObservationEntry entry) {
+            if (IsDiscard) {
+                return;
+            }
+
+            var kind = (ObservationKind)entry.Kind;
+            var declaration = QueuedDeclaration(entry.Key);
+
+            if (declaration == null) {
+                RefuseQueued(entry.Key, "which no observation declares");
+                return;
+            }
+
+            if (declaration.IsGuard || declaration.Kind != kind) {
+                RefuseQueued(entry.Key, "as a " + kind + " entry, but it declares " + declaration);
+                return;
+            }
+
+            if (kind == ObservationKind.Occurrence) {
+                RecordOccurrence(declaration, new Tick(entry.TickValue), entry.Subject, ReadOnlySpan<uint>.Empty);
+                return;
+            }
+
+            if (entry.Amount < 0) {
+                RefuseQueued(entry.Key, "with a negative amount, and a counter only goes up");
+                return;
+            }
+
+            AddCount(declaration, ObservationReason.None, entry.Amount);
+        }
+
         internal void SetGauge(ObservationDeclaration declaration, double value) {
             if (IsDiscard) {
                 return;
@@ -406,6 +445,33 @@ namespace Spellbound.Core.Observations {
             }
 
             return slot;
+        }
+
+        private ObservationDeclaration QueuedDeclaration(uint keyHash) {
+            if (_queuedDeclarations.TryGetValue(keyHash, out var declaration)) {
+                return declaration;
+            }
+
+            if (_refusedQueuedKeys.Contains(keyHash)) {
+                return null;
+            }
+
+            var declared = ObservationRegistry.Declared();
+
+            for (var i = 0; i < declared.Count; i++) {
+                _queuedDeclarations[declared[i].Key.Hash] = declared[i];
+            }
+
+            return _queuedDeclarations.TryGetValue(keyHash, out declaration) ? declaration : null;
+        }
+
+        private void RefuseQueued(uint keyHash, string failure) {
+            if (!_refusedQueuedKeys.Add(keyHash)) {
+                return;
+            }
+
+            Log.Error("The observation context '" + Name + "' drained the key hash " + keyHash + " from a native"
+                      + " queue " + failure + "; its entries are skipped.");
         }
 
         private bool OverRateCap(uint keyHash, Tick tick) {
