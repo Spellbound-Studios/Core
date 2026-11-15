@@ -1,5 +1,6 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
+using System;
 using System.Collections.Generic;
 using Spellbound.Core.Logging;
 using UnityEngine;
@@ -35,6 +36,34 @@ namespace Spellbound.Core.Observations {
                     else {
                         Log.Error(name + ": a quality level override is skipped. " + error);
                     }
+                }
+            }
+
+            if (guardPolicies != null) {
+                foreach (var entry in guardPolicies) {
+                    if (!ObservationKey.TryParse(entry.key, out var key, out var error)) {
+                        Log.Error(name + ": a guard policy override is skipped. " + error);
+                        continue;
+                    }
+
+                    if (entry.policy == null) {
+                        Log.Error(name + ": the guard policy override of '" + key
+                                  + "' names no policy; it is skipped.");
+                        continue;
+                    }
+
+                    GuardPolicyValues values;
+
+                    try {
+                        values = entry.policy.Values;
+                    }
+                    catch (ArgumentException exception) {
+                        Log.Error(name + ": the guard policy override of '" + key + "' is skipped. "
+                                  + exception.Message);
+                        continue;
+                    }
+
+                    context.SetGuardPolicy(key, values);
                 }
             }
         }

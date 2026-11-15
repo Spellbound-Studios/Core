@@ -55,6 +55,8 @@ namespace Spellbound.Core {
             public static Guard Guard(string key, string description, GuardPolicyValues defaults) =>
                 ObservationRegistry.Guard(key, description, defaults);
 
+            public static Guard FindGuard(ObservationKey key) => Spellbound.Core.Observations.Guard.Find(key);
+
             public static Occurrence Occurrence(string key, string description) =>
                 ObservationRegistry.Occurrence(key, description);
 

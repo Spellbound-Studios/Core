@@ -13,6 +13,11 @@ namespace Spellbound.Core.Observations {
         private readonly List<ObservationSlot> _slots = new List<ObservationSlot>();
         private readonly Dictionary<string, uint> _packageVersions =
             new Dictionary<string, uint>(StringComparer.Ordinal);
+        private readonly Dictionary<(uint, ulong), GuardState> _guardStates =
+            new Dictionary<(uint, ulong), GuardState>();
+        private readonly Dictionary<uint, (int Repairs, TickSpan Window, TickSpan Hold)> _guardTicks =
+            new Dictionary<uint, (int Repairs, TickSpan Window, TickSpan Hold)>();
+        private readonly Dictionary<uint, GuardPolicyValues> _guardPolicies = new Dictionary<uint, GuardPolicyValues>();
         private bool _disposed;
 
         internal ObservationContext(string name, bool isDiscard, TickRate rate) {
@@ -31,6 +36,8 @@ namespace Spellbound.Core.Observations {
         public TickRate Rate { get; }
 
         public bool IsDisposed => _disposed;
+
+        internal int GuardEntryCount => _guardStates.Count;
 
         public int Read(List<ObservationReading> readings) {
             return Read(null, readings);
@@ -189,8 +196,45 @@ namespace Spellbound.Core.Observations {
             Bump(slot);
         }
 
-        internal void RecordOccurrence(ObservationDeclaration declaration) {
+        internal void SetGuardPolicy(ObservationKey key, GuardPolicyValues values) {
             if (IsDiscard) {
+                return;
+            }
+
+            _guardPolicies[key.Hash] = values;
+            _guardTicks.Remove(key.Hash);
+        }
+
+        internal (int Repairs, TickSpan Window, TickSpan Hold) GuardTicks(Guard guard) {
+            var hash = guard.Key.Hash;
+
+            if (_guardTicks.TryGetValue(hash, out var ticks)) {
+                return ticks;
+            }
+
+            if (!_guardPolicies.TryGetValue(hash, out var policy)) {
+                policy = guard.Defaults;
+            }
+
+            ticks = (policy.Repairs, Rate.FromSeconds(policy.WindowSeconds), Rate.FromSeconds(policy.HoldSeconds));
+            _guardTicks.Add(hash, ticks);
+            return ticks;
+        }
+
+        internal bool TryGetGuardState(uint guardHash, ulong subject, out GuardState state) {
+            return _guardStates.TryGetValue((guardHash, subject), out state);
+        }
+
+        internal void SetGuardState(in GuardState state) {
+            _guardStates[(state.GuardHash, state.Subject)] = state;
+        }
+
+        internal void RemoveGuardState(uint guardHash, ulong subject) {
+            _guardStates.Remove((guardHash, subject));
+        }
+
+        internal void RecordOccurrence(ObservationDeclaration declaration) {
+            if (IsDiscard || declaration.IsGuard) {
                 return;
             }
 
