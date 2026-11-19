@@ -280,6 +280,7 @@ namespace Spellbound.Core.Operations {
             var parameters = method.GetParameters();
             var arguments = new List<ArgumentDescription>(parameters.Length);
             var contextIndex = -1;
+            string firstTarget = null;
 
             foreach (var parameter in parameters) {
                 if (parameter.ParameterType == typeof(OperationContext)) {
@@ -313,6 +314,16 @@ namespace Spellbound.Core.Operations {
                     ? Enum.GetNames(underlying)
                     : underlying == typeof(bool) ? new[] { "true", "false" } : null;
                 var isTarget = argument?.Target == true;
+
+                if (isTarget && firstTarget != null) {
+                    Log.Error("Operation '" + group + " " + attribute.Name + "' marks two arguments as its target, '"
+                              + firstTarget + "' and '" + parameter.Name + "'; '" + firstTarget + "' is kept.");
+                    isTarget = false;
+                }
+                else if (isTarget) {
+                    firstTarget = parameter.Name;
+                }
+
                 arguments.Add(new ArgumentDescription(parameter, ArgumentText.KebabCase(parameter.Name), summary, legal,
                     isTarget));
             }

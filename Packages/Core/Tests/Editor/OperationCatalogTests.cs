@@ -157,7 +157,8 @@ namespace Spellbound.Core.Tests {
             var catalog = new OperationCatalog(() => new[] { Fixture, faulty, Core });
             var settings = UnityEngine.ScriptableObject.CreateInstance<OperationSettings>();
             var host = new OperationHost(catalog, () => settings);
-            var text = host.Run("core help --all", OperationCaller.Development(), ObservationContext.Discard).Result.Text;
+            var text = host.Run("core help --all", OperationCaller.Development(), ObservationContext.Discard)
+                .Result.Text;
             StringAssert.StartsWith("succeeded: 2 groups, ", text);
             StringAssert.Contains("\nfixture: Operations that exist so the catalog and the host can be tested.\n",
                 text);
@@ -206,8 +207,10 @@ namespace Spellbound.Core.Tests {
         public void AnOperationDeclaredTwiceKeepsTheFirstAndLogsTheSecond() {
             var duplicate = DynamicOperations.Assembly("Zeta.Duplicate", "fixture", null, "echo");
             var catalog = new OperationCatalog(() => new[] { Fixture, duplicate });
-            var host = new OperationHost(catalog, () => UnityEngine.ScriptableObject.CreateInstance<OperationSettings>());
-            Assert.AreEqual("succeeded: hi", host.Run("fixture echo hi", OperationCaller.Development(), ObservationContext.Discard).Result.Text);
+            var host = new OperationHost(catalog,
+                () => UnityEngine.ScriptableObject.CreateInstance<OperationSettings>());
+            Assert.AreEqual("succeeded: hi",
+                host.Run("fixture echo hi", OperationCaller.Development(), ObservationContext.Discard).Result.Text);
             Assert.AreEqual(1, _recording.Count);
             StringAssert.Contains("declared twice", _recording.Entries[0].Message);
         }
@@ -238,8 +241,10 @@ namespace Spellbound.Core.Tests {
             var secret = catalog.Describe("fixture", "secret");
             Assert.AreEqual(OperationAudiences.Approver, secret.Audience);
             Assert.AreEqual(OperationEffect.Writes, secret.Effect);
-            Assert.AreEqual(OperationAvailability.WhilePlaying, catalog.Describe("fixture", "playing-only").Availability);
-            CollectionAssert.AreEqual(new[] { "Common", "Rare", "Epic" }, catalog.Describe("fixture", "tier").Arguments[0].LegalValues);
+            Assert.AreEqual(OperationAvailability.WhilePlaying,
+                catalog.Describe("fixture", "playing-only").Availability);
+            CollectionAssert.AreEqual(new[] { "Common", "Rare", "Epic" },
+                catalog.Describe("fixture", "tier").Arguments[0].LegalValues);
         }
 
         [Test]
@@ -259,7 +264,8 @@ namespace Spellbound.Core.Tests {
         public void FindListsByPrefixAndFindByNameAcrossGroups() {
             var catalog = new OperationCatalog(() => new[] { Fixture, Core });
             var found = catalog.Find("fixture e");
-            CollectionAssert.AreEquivalent(new[] { "fixture echo", "fixture editing-only" }, found.Select(operation => operation.Line));
+            CollectionAssert.AreEquivalent(new[] { "fixture echo", "fixture editing-only" },
+                found.Select(operation => operation.Line));
             Assert.AreEqual(1, catalog.FindByName("help").Count);
             Assert.AreEqual(0, catalog.FindByName("absent").Count);
         }
@@ -287,8 +293,11 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void MarkedAssemblyScanFindsOnlyMarkedAssemblies() {
-            var marked = MarkedAssemblyScan.Assemblies(new[] { Fixture, typeof(NUnit.Framework.Assert).Assembly, Core });
-            CollectionAssert.AreEqual(new[] { Core.GetName().Name, Fixture.GetName().Name }, marked.Select(assembly => assembly.GetName().Name));
+            var marked = MarkedAssemblyScan.Assemblies(new[] {
+                Fixture, typeof(NUnit.Framework.Assert).Assembly, Core
+            });
+            CollectionAssert.AreEqual(new[] { Core.GetName().Name, Fixture.GetName().Name },
+                marked.Select(assembly => assembly.GetName().Name));
             var parsers = MarkedAssemblyScan.TypesWith<ArgumentParserAttribute>(new[] { Fixture });
             CollectionAssert.AreEqual(new[] { typeof(FixtureCoordinateParser) }, parsers);
         }
@@ -310,14 +319,15 @@ namespace Spellbound.Core.Tests {
             var warm = new OperationCatalog();
             var warmGroups = warm.Groups.Count;
             var assemblies = cold.MarkedAssemblies().Count;
-            Log.Emit(LogLevel.Info, "OperationCatalog load: " + assemblies + " marked assemblies, " + groups + " groups, " + operations
-                                  + " operations, cold " + cold.LoadMilliseconds.ToString("F3") + " ms, warm "
-                                  + warm.LoadMilliseconds.ToString("F3") + " ms");
+            Log.Emit(LogLevel.Info, "OperationCatalog load: " + assemblies + " marked assemblies, " + groups
+                                    + " groups, " + operations + " operations, cold "
+                                    + cold.LoadMilliseconds.ToString("F3") + " ms, warm "
+                                    + warm.LoadMilliseconds.ToString("F3") + " ms");
             Assert.AreEqual(groups, warmGroups);
             Assert.Greater(operations, 0);
         }
 
-        private static class DynamicOperations {
+        internal static class DynamicOperations {
             private static readonly ConstructorInfo OperationConstructor = typeof(OperationAttribute).GetConstructor(
                 new[] { typeof(string), typeof(string), typeof(OperationEffect) });
 
@@ -368,6 +378,32 @@ namespace Spellbound.Core.Tests {
                 var sound = DefineMethod(type, "Sound");
                 sound.SetCustomAttribute(new CustomAttributeBuilder(OperationConstructor,
                     new object[] { "sound", "An operation declared beside a faulty one.", OperationEffect.Reads }));
+                type.CreateType();
+                return builder;
+            }
+
+            public static Assembly AssemblyWithTwoTargets(string assemblyName, string group, string operationName,
+                string firstParameter, string secondParameter) {
+                var builder = DefineAssembly(assemblyName, group, null, out var type);
+                var attributes = MethodAttributes.Public | MethodAttributes.Static;
+                var method = type.DefineMethod("WithTwoTargets", attributes, typeof(string),
+                    new[] { typeof(string), typeof(string) });
+                method.SetCustomAttribute(new CustomAttributeBuilder(OperationConstructor,
+                    new object[] { operationName, "An operation that marks two targets.", OperationEffect.Reads }));
+                var argumentConstructor = typeof(ArgumentAttribute).GetConstructor(new[] { typeof(string) });
+                var targetProperty = new[] { typeof(ArgumentAttribute).GetProperty(nameof(ArgumentAttribute.Target)) };
+                var parameterNames = new[] { firstParameter, secondParameter };
+
+                for (var position = 1; position <= parameterNames.Length; position++) {
+                    var parameter = method.DefineParameter(position, ParameterAttributes.None,
+                        parameterNames[position - 1]);
+                    parameter.SetCustomAttribute(new CustomAttributeBuilder(argumentConstructor,
+                        new object[] { "A marked instance." }, targetProperty, new object[] { true }));
+                }
+
+                var generator = method.GetILGenerator();
+                generator.Emit(OpCodes.Ldarg_0);
+                generator.Emit(OpCodes.Ret);
                 type.CreateType();
                 return builder;
             }
@@ -432,7 +468,7 @@ namespace Spellbound.Core.Tests {
             }
         }
 
-        private readonly struct DynamicOperation {
+        internal readonly struct DynamicOperation {
             public string MethodName { get; }
             public string Name { get; }
             public string Description { get; }

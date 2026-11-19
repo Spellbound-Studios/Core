@@ -95,8 +95,10 @@ namespace Spellbound.Core.Operations {
                 return run;
             }
 
-            Execute(run, description, bound.Values, text, caller, observations, bound.Confirmed, bound.DryRun,
-                askRouter, CancellationToken.None);
+            var invocation = new OperationInvocation(description.Identifier, bound.Values, text, bound.Confirmed,
+                bound.DryRun, TargetOf(description, bound.Values));
+            Execute(run, description, invocation, bound.Values, text, caller, observations, askRouter,
+                CancellationToken.None);
             return run;
         }
 
@@ -130,9 +132,8 @@ namespace Spellbound.Core.Operations {
                 return run;
             }
 
-            Execute(run, description, values, invocation.Line ?? description.Line, caller, observations,
-                invocation.Confirmed,
-                invocation.DryRun, askRouter, CancellationToken.None);
+            Execute(run, description, CarryingTarget(invocation, description, values), values,
+                invocation.Line ?? description.Line, caller, observations, askRouter, CancellationToken.None);
             return run;
         }
 
@@ -168,7 +169,32 @@ namespace Spellbound.Core.Operations {
                 return null;
             }
 
-            return new OperationInvocation(description.Identifier, bound.Values, line, bound.Confirmed, bound.DryRun);
+            return new OperationInvocation(description.Identifier, bound.Values, line, bound.Confirmed, bound.DryRun,
+                TargetOf(description, bound.Values));
+        }
+
+        internal static OperationInvocation CarryingTarget(OperationInvocation invocation,
+            OperationDescription description, object[] values) {
+            if (description.Target == null || invocation.Target != null) {
+                return invocation;
+            }
+
+            return new OperationInvocation(invocation.Identifier, values, invocation.Line, invocation.Confirmed,
+                invocation.DryRun, TargetOf(description, values));
+        }
+
+        private static object TargetOf(OperationDescription description, object[] values) {
+            if (description.Target == null) {
+                return null;
+            }
+
+            for (var index = 0; index < description.Arguments.Count; index++) {
+                if (description.Arguments[index] == description.Target) {
+                    return index < values.Length ? values[index] : null;
+                }
+            }
+
+            return null;
         }
 
         private void RunFrom(OperationRun chain, IReadOnlyList<string> lines, int index, OperationCaller caller,
@@ -359,9 +385,11 @@ namespace Spellbound.Core.Operations {
             return previous[right.Length];
         }
 
-        private void Execute(OperationRun run, OperationDescription description, object[] values, string line,
-            OperationCaller caller, ObservationContext observations, bool confirmed, bool dryRun, bool askRouter,
+        private void Execute(OperationRun run, OperationDescription description, OperationInvocation invocation,
+            object[] values, string line, OperationCaller caller, ObservationContext observations, bool askRouter,
             CancellationToken cancellationToken) {
+            var confirmed = invocation.Confirmed;
+            var dryRun = invocation.DryRun;
             var watch = Stopwatch.StartNew();
             var gate = Gate(description, caller, confirmed, dryRun);
 
