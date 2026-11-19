@@ -65,6 +65,9 @@ namespace Spellbound.Core.Tests.OperationFixture {
         public static int StampCount { get; private set; }
         public static int PurgeCount { get; private set; }
 
+        [Operation("counts", "Reports the stamp, purge and wipe counts.", OperationEffect.Reads)]
+        public static string Counts() => "stamp " + StampCount + " purge " + PurgeCount + " wipe " + WipeCount;
+
         [Operation("stamp", "Adds one to the stamp count; it takes no context, so it cannot preview.",
             OperationEffect.Writes)]
         public static string Stamp() {

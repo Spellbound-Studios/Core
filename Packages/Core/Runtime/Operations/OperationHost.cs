@@ -161,6 +161,47 @@ namespace Spellbound.Core.Operations {
             return chain;
         }
 
+        public OperationRun Replay(IReadOnlyList<OperationHistoryEntry> entries, OperationCaller caller,
+            ObservationContext observations) {
+            if (entries == null) {
+                throw new ArgumentNullException(nameof(entries));
+            }
+
+            if (caller == null) {
+                throw new ArgumentNullException(nameof(caller));
+            }
+
+            if (observations == null) {
+                throw new ArgumentNullException(nameof(observations));
+            }
+
+            var lines = new List<string>(entries.Count);
+
+            for (var index = 0; index < entries.Count; index++) {
+                if (entries[index].Status == OperationStatus.Succeeded) {
+                    lines.Add(entries[index].Line);
+                }
+            }
+
+            var replay = new OperationRun();
+            replay.Report("replayed " + lines.Count + ", skipped " + (entries.Count - lines.Count));
+            var chain = RunAll(lines, caller, observations);
+
+            chain.WhenDone(result => {
+                foreach (var line in chain.Lines) {
+                    replay.Report(line);
+                }
+
+                for (var index = 0; index < chain.Results.Count - 1; index++) {
+                    replay.Append(chain.Results[index]);
+                }
+
+                replay.Complete(result);
+            });
+
+            return replay;
+        }
+
         public OperationInvocation Parse(string line, IReadOnlyDictionary<string, string> placeholders,
             out OperationResult failure) {
             if (!TryPrepare(line ?? string.Empty, placeholders, out var description, out var bound, out failure)) {
