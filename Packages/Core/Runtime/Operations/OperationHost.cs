@@ -97,9 +97,8 @@ namespace Spellbound.Core.Operations {
 
             var invocation = new OperationInvocation(description.Identifier, bound.Values, text, bound.Confirmed,
                 bound.DryRun, TargetOf(description, bound.Values));
-            Execute(run, description, invocation, bound.Values, text, caller, observations, askRouter,
+            return Execute(run, description, invocation, bound.Values, text, caller, observations, askRouter,
                 CancellationToken.None);
-            return run;
         }
 
         private OperationRun RunInvocation(OperationInvocation invocation, OperationCaller caller,
@@ -132,9 +131,8 @@ namespace Spellbound.Core.Operations {
                 return run;
             }
 
-            Execute(run, description, CarryingTarget(invocation, description, values), values,
+            return Execute(run, description, CarryingTarget(invocation, description, values), values,
                 invocation.Line ?? description.Line, caller, observations, askRouter, CancellationToken.None);
-            return run;
         }
 
         public OperationRun RunAll(IReadOnlyList<string> lines, OperationCaller caller,
@@ -385,9 +383,9 @@ namespace Spellbound.Core.Operations {
             return previous[right.Length];
         }
 
-        private void Execute(OperationRun run, OperationDescription description, OperationInvocation invocation,
-            object[] values, string line, OperationCaller caller, ObservationContext observations, bool askRouter,
-            CancellationToken cancellationToken) {
+        private OperationRun Execute(OperationRun run, OperationDescription description,
+            OperationInvocation invocation, object[] values, string line, OperationCaller caller,
+            ObservationContext observations, bool askRouter, CancellationToken cancellationToken) {
             var confirmed = invocation.Confirmed;
             var dryRun = invocation.DryRun;
             var watch = Stopwatch.StartNew();
@@ -395,7 +393,16 @@ namespace Spellbound.Core.Operations {
 
             if (gate != null) {
                 Finish(run, line, caller, observations, gate, description, watch);
-                return;
+                return run;
+            }
+
+            if (askRouter && Router != null && description.Effect != OperationEffect.Reads) {
+                var routing = new OperationInvocation(invocation.Identifier, values, line, confirmed, dryRun,
+                    invocation.Target);
+
+                if (Router.TryRoute(routing, description, caller, out var routed)) {
+                    return routed;
+                }
             }
 
             var context = new OperationContext(this, run, caller, observations, dryRun, confirmed, cancellationToken);
@@ -414,19 +421,20 @@ namespace Spellbound.Core.Operations {
             catch (TargetInvocationException exception) {
                 var inner = exception.InnerException ?? exception;
                 Finish(run, line, caller, observations, FromException(inner, description), description, watch);
-                return;
+                return run;
             }
             catch (Exception exception) {
                 Finish(run, line, caller, observations, FromException(exception, description), description, watch);
-                return;
+                return run;
             }
 
             if (returned is Task task) {
                 AwaitTask(run, task, description, line, caller, observations, dryRun, watch);
-                return;
+                return run;
             }
 
             Finish(run, line, caller, observations, Render(returned, description, dryRun), description, watch);
+            return run;
         }
 
         private void AwaitTask(OperationRun run, Task task, OperationDescription description, string line,
