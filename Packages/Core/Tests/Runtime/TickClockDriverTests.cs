@@ -50,6 +50,25 @@ namespace Spellbound.Core.PlayModeTests {
         }
 
         [UnityTest]
+        public IEnumerator FiftyFixedStepsRaiseTwentyTicked() {
+            Time.fixedDeltaTime = 0.02f;
+            _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20), ObservationContext.Discard);
+            var ticked = 0;
+            var stepped = 0;
+            _clock.Ticked += _ => ticked++;
+            _clock.Stepped += _ => stepped++;
+
+            for (var step = 0; step < 50; step++) {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Log.Emit(LogLevel.Info, "TickClockDriverTests: 50 fixed steps raised Ticked " + ticked
+                + " times and Stepped " + stepped + " times at 20 a second with fixedDeltaTime 0.02");
+            Assert.AreEqual(20, ticked);
+            Assert.GreaterOrEqual(stepped, 50);
+        }
+
+        [UnityTest]
         public IEnumerator TimeScaleZeroStopsTheDefaultSource() {
             _clock = CoreKit.Time.StartClock(TickRate.PerSecond(20), ObservationContext.Discard);
             yield return new WaitForFixedUpdate();

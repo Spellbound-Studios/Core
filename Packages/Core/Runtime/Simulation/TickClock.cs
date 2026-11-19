@@ -25,6 +25,8 @@ namespace Spellbound.Core.Simulation {
 
         public event Action<Tick> Stepped;
 
+        public event Action<Tick> Ticked;
+
         public ITickSource Source { get; }
 
         public TickRate Rate { get; }
@@ -59,6 +61,7 @@ namespace Spellbound.Core.Simulation {
 
             if (answer > Current) {
                 Current = answer;
+                Ticked?.Invoke(Current);
                 return true;
             }
 
