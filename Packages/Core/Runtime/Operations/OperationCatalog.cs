@@ -8,13 +8,16 @@ using Spellbound.Core.Tooling;
 
 namespace Spellbound.Core.Operations {
     public sealed class OperationCatalog {
-        private const BindingFlags StaticOperations = BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        private const BindingFlags StaticOperations =
+            BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly;
         private const BindingFlags InstanceOperations = BindingFlags.Public | BindingFlags.Instance;
 
         private readonly Func<IEnumerable<Assembly>> _assemblySource;
         private readonly List<OperationGroupDescription> _groups = new List<OperationGroupDescription>();
-        private readonly Dictionary<uint, OperationDescription> _byIdentifier = new Dictionary<uint, OperationDescription>();
-        private readonly Dictionary<object, List<OperationDescription>> _instances = new Dictionary<object, List<OperationDescription>>();
+        private readonly Dictionary<uint, OperationDescription> _byIdentifier =
+            new Dictionary<uint, OperationDescription>();
+        private readonly Dictionary<object, List<OperationDescription>> _instances =
+            new Dictionary<object, List<OperationDescription>>();
         private bool _loaded;
 
         public double LoadMilliseconds { get; private set; }
@@ -33,7 +36,9 @@ namespace Spellbound.Core.Operations {
         }
 
         public IReadOnlyList<Assembly> MarkedAssemblies() {
-            return _assemblySource != null ? MarkedAssemblyScan.Assemblies(_assemblySource()) : MarkedAssemblyScan.Assemblies();
+            return _assemblySource != null
+                ? MarkedAssemblyScan.Assemblies(_assemblySource())
+                : MarkedAssemblyScan.Assemblies();
         }
 
         public OperationGroupDescription Group(string name) {
@@ -112,7 +117,8 @@ namespace Spellbound.Core.Operations {
             }
 
             if (groupAttribute == null) {
-                Log.Error("Operations on " + type.FullName + " cannot be registered: its assembly carries no OperationGroup attribute.");
+                Log.Error("Operations on " + type.FullName
+                          + " cannot be registered: its assembly carries no OperationGroup attribute.");
                 return 0;
             }
 
@@ -180,7 +186,8 @@ namespace Spellbound.Core.Operations {
                 }
                 else if (!string.IsNullOrWhiteSpace(attribute.Job) && !string.IsNullOrWhiteSpace(group.Job)
                          && !string.Equals(attribute.Job, group.Job, StringComparison.Ordinal)) {
-                    Log.Error("Two operation groups are named '" + attribute.Name + "': " + string.Join(", ", group.Assemblies)
+                    Log.Error("Two operation groups are named '" + attribute.Name + "': "
+                              + string.Join(", ", group.Assemblies)
                               + " is used and " + assembly.GetName().Name + " is skipped.");
                     continue;
                 }
@@ -277,7 +284,8 @@ namespace Spellbound.Core.Operations {
             foreach (var parameter in parameters) {
                 if (parameter.ParameterType == typeof(OperationContext)) {
                     if (contextIndex >= 0) {
-                        Log.Error("Operation '" + group + " " + attribute.Name + "' declares two OperationContext parameters and was skipped.");
+                        Log.Error("Operation '" + group + " " + attribute.Name
+                                  + "' declares two OperationContext parameters and was skipped.");
                         return null;
                     }
 
@@ -286,8 +294,8 @@ namespace Spellbound.Core.Operations {
                 }
 
                 if (parameter.IsOut || parameter.ParameterType.IsByRef) {
-                    Log.Error("Operation '" + group + " " + attribute.Name + "' has a by-reference parameter '" + parameter.Name
-                              + "' and was skipped.");
+                    Log.Error("Operation '" + group + " " + attribute.Name + "' has a by-reference parameter '"
+                              + parameter.Name + "' and was skipped.");
                     return null;
                 }
 
@@ -301,8 +309,12 @@ namespace Spellbound.Core.Operations {
 
                 var summary = argument?.Description ?? string.Empty;
                 var underlying = Nullable.GetUnderlyingType(parameter.ParameterType) ?? parameter.ParameterType;
-                var legal = underlying.IsEnum ? Enum.GetNames(underlying) : underlying == typeof(bool) ? new[] { "true", "false" } : null;
-                arguments.Add(new ArgumentDescription(parameter, ArgumentText.KebabCase(parameter.Name), summary, legal));
+                var legal = underlying.IsEnum
+                    ? Enum.GetNames(underlying)
+                    : underlying == typeof(bool) ? new[] { "true", "false" } : null;
+                var isTarget = argument?.Target == true;
+                arguments.Add(new ArgumentDescription(parameter, ArgumentText.KebabCase(parameter.Name), summary, legal,
+                    isTarget));
             }
 
             return new OperationDescription(group, attribute, method, instance, arguments, contextIndex);

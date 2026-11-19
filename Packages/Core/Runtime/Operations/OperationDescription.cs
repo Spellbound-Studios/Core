@@ -15,6 +15,7 @@ namespace Spellbound.Core.Operations {
         public string Audience { get; }
         public OperationAvailability Availability { get; }
         public IReadOnlyList<ArgumentDescription> Arguments { get; }
+        public ArgumentDescription Target { get; }
         public uint Identifier { get; }
         public string Line => Group + " " + Name;
 
@@ -30,13 +31,30 @@ namespace Spellbound.Core.Operations {
             Name = attribute.Name;
             Summary = attribute.Description;
             Effect = attribute.Effect;
-            Audience = string.IsNullOrWhiteSpace(attribute.Audience) ? OperationAudiences.Developer : attribute.Audience;
+            Audience = string.IsNullOrWhiteSpace(attribute.Audience)
+                ? OperationAudiences.Developer
+                : attribute.Audience;
             Availability = attribute.Availability;
             Arguments = arguments;
+            Target = FirstTarget(arguments);
             Method = method;
             Instance = instance;
             ContextParameterIndex = contextParameterIndex;
             Identifier = ComputeIdentifier(group, attribute.Name);
+        }
+
+        private static ArgumentDescription FirstTarget(IReadOnlyList<ArgumentDescription> arguments) {
+            if (arguments == null) {
+                return null;
+            }
+
+            foreach (var argument in arguments) {
+                if (argument.IsTarget) {
+                    return argument;
+                }
+            }
+
+            return null;
         }
 
         public static uint ComputeIdentifier(string group, string name) {
@@ -50,7 +68,8 @@ namespace Spellbound.Core.Operations {
                 builder.Append(' ');
 
                 if (argument.HasDefault) {
-                    builder.Append("[--").Append(argument.Name).Append(" <").Append(TypeWord(argument.Type)).Append('>');
+                    builder.Append("[--").Append(argument.Name).Append(" <").Append(TypeWord(argument.Type))
+                        .Append('>');
 
                     if (argument.Default != null) {
                         builder.Append(" = ").Append(argument.DefaultText);

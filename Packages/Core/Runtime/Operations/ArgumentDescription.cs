@@ -12,10 +12,12 @@ namespace Spellbound.Core.Operations {
         public bool HasDefault { get; }
         public object Default { get; }
         public IReadOnlyList<string> LegalValues { get; }
+        public bool IsTarget { get; }
 
         internal ParameterInfo Parameter { get; }
 
-        internal ArgumentDescription(ParameterInfo parameter, string name, string summary, IReadOnlyList<string> legalValues) {
+        internal ArgumentDescription(ParameterInfo parameter, string name, string summary,
+            IReadOnlyList<string> legalValues, bool isTarget) {
             Parameter = parameter;
             Name = name;
             Type = parameter.ParameterType;
@@ -23,6 +25,7 @@ namespace Spellbound.Core.Operations {
             HasDefault = parameter.HasDefaultValue;
             Default = parameter.HasDefaultValue ? parameter.DefaultValue : null;
             LegalValues = legalValues ?? Array.Empty<string>();
+            IsTarget = isTarget;
         }
 
         public string DefaultText => HasDefault ? ArgumentText.Describe(Default) : null;
