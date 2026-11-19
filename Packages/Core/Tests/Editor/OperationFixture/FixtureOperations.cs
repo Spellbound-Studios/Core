@@ -6,17 +6,25 @@ using Spellbound.Core.Observations;
 using Spellbound.Core.Operations;
 using UnityEngine;
 
-[assembly: OperationGroup("fixture", "Operations that exist so the catalog and the host can be tested.", Listed = false)]
+[assembly: OperationGroup("fixture", "Operations that exist so the catalog and the host can be tested.",
+    Listed = false)]
 
 namespace Spellbound.Core.Tests.OperationFixture {
     public static class FixtureOperations {
         public static int WipeCount { get; private set; }
 
-        [Operation("echo", "Returns the text it was given.", OperationEffect.Reads, Audience = OperationAudiences.Anyone)]
+        [Operation("echo", "Returns the text it was given.", OperationEffect.Reads,
+            Audience = OperationAudiences.Anyone)]
         public static string Echo([Argument("The text to return.")] string text) => text;
 
+        [Operation("inspect", "Returns the instance it reads.", OperationEffect.Reads)]
+        public static string Inspect([Argument("The instance the operation reads.", Target = true)] int instance,
+            [Argument("The aspect of the instance to read.")] string aspect = "all") =>
+            instance + " " + aspect;
+
         [Operation("add", "Adds two integers.", OperationEffect.Reads)]
-        public static string Add([Argument("The left operand.")] int left, [Argument("The right operand.")] int right = 1) =>
+        public static string Add([Argument("The left operand.")] int left,
+            [Argument("The right operand.")] int right = 1) =>
             (left + right).ToString();
 
         [Operation("tier", "Names a tier.", OperationEffect.Reads)]
@@ -40,7 +48,8 @@ namespace Spellbound.Core.Tests.OperationFixture {
         public static string Paint([Argument("The colour.")] Color colour) => ColorUtility.ToHtmlStringRGBA(colour);
 
         [Operation("flag", "Reports a flag.", OperationEffect.Reads)]
-        public static string Flag([Argument("The flag.")] bool on, [Argument("A number after the flag.")] int count = 0) =>
+        public static string Flag([Argument("The flag.")] bool on,
+            [Argument("A number after the flag.")] int count = 0) =>
             on + ":" + count;
 
         [Operation("wipe", "Deletes everything, or says what it would delete.", OperationEffect.Destroys)]
@@ -56,6 +65,9 @@ namespace Spellbound.Core.Tests.OperationFixture {
         public static int StampCount { get; private set; }
         public static int PurgeCount { get; private set; }
 
+        [Operation("counts", "Reports the stamp, purge and wipe counts.", OperationEffect.Reads)]
+        public static string Counts() => "stamp " + StampCount + " purge " + PurgeCount + " wipe " + WipeCount;
+
         [Operation("stamp", "Adds one to the stamp count; it takes no context, so it cannot preview.",
             OperationEffect.Writes)]
         public static string Stamp() {
@@ -69,13 +81,16 @@ namespace Spellbound.Core.Tests.OperationFixture {
             return "purged 3 things";
         }
 
-        [Operation("secret", "Needs the approver audience.", OperationEffect.Writes, Audience = OperationAudiences.Approver)]
+        [Operation("secret", "Needs the approver audience.", OperationEffect.Writes,
+            Audience = OperationAudiences.Approver)]
         public static string Secret() => "approved";
 
-        [Operation("playing-only", "Exists only while playing.", OperationEffect.Reads, Availability = OperationAvailability.WhilePlaying)]
+        [Operation("playing-only", "Exists only while playing.", OperationEffect.Reads,
+            Availability = OperationAvailability.WhilePlaying)]
         public static string PlayingOnly() => "playing";
 
-        [Operation("editing-only", "Exists only while editing.", OperationEffect.Reads, Availability = OperationAvailability.WhileEditing)]
+        [Operation("editing-only", "Exists only while editing.", OperationEffect.Reads,
+            Availability = OperationAvailability.WhileEditing)]
         public static string EditingOnly() => "editing";
 
         [Operation("boom", "Refuses with a hint.", OperationEffect.Reads)]
@@ -91,13 +106,15 @@ namespace Spellbound.Core.Tests.OperationFixture {
         }
 
         [Operation("coordinate", "Reports a coordinate parsed by a custom parser.", OperationEffect.Reads)]
-        public static string Coordinate([Argument("The coordinate as column:row.")] FixtureCoordinate at) => at.Column + "," + at.Row;
+        public static string Coordinate([Argument("The coordinate as column:row.")] FixtureCoordinate at) =>
+            at.Column + "," + at.Row;
 
         [Operation("badge", "Returns a value a custom renderer draws.", OperationEffect.Reads)]
         public static FixtureBadge Badge() => new FixtureBadge("gold");
 
         [Operation("rows", "Returns a table.", OperationEffect.Reads)]
-        public static OperationTable Rows() => new OperationTable("name", "count").AddRow("apples", 3).AddRow("pears", 12);
+        public static OperationTable Rows() =>
+            new OperationTable("name", "count").AddRow("apples", 3).AddRow("pears", 12);
 
         [Operation("many", "Returns many lines.", OperationEffect.Reads)]
         public static List<string> Many([Argument("How many lines.")] int count) {
@@ -128,7 +145,8 @@ namespace Spellbound.Core.Tests.OperationFixture {
         public static string Nothing() => null;
 
         [Operation("camel-case-name", "Has a camel case parameter.", OperationEffect.Reads)]
-        public static string CamelCaseName([Argument("A camel case parameter.")] int maxHitPoints) => maxHitPoints.ToString();
+        public static string CamelCaseName([Argument("A camel case parameter.")] int maxHitPoints) =>
+            maxHitPoints.ToString();
 
         [Operation("observe", "Remembers the observation context the run was given.", OperationEffect.Reads)]
         public static string Observe(OperationContext context) {

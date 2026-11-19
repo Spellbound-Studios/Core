@@ -20,7 +20,8 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void ASourceWithADefaultRateIsRefused() {
-            Assert.Throws<ArgumentException>(() => new TickClock(new SetTickSource(default, new Tick(0)), ObservationContext.Discard));
+            Assert.Throws<ArgumentException>(() =>
+                new TickClock(new SetTickSource(default, new Tick(0)), ObservationContext.Discard));
         }
 
         [Test]
@@ -96,7 +97,8 @@ namespace Spellbound.Core.Tests {
             Assert.AreEqual(TickRate.PerSecond(20), clock.Rate);
             var reasons = new System.Collections.Generic.List<ReasonCount>();
             Assert.AreEqual(3, observations.ReadReasons(CoreObservations.ClockRateChanged.Key, reasons));
-            CollectionAssert.Contains(reasons.ConvertAll(entry => entry.Reason.Name), TickRate.PerSecond(30).ToString());
+            CollectionAssert.Contains(reasons.ConvertAll(entry => entry.Reason.Name),
+                TickRate.PerSecond(30).ToString());
         }
 
         [Test]
@@ -125,6 +127,56 @@ namespace Spellbound.Core.Tests {
 
             Assert.AreEqual(1, calls);
             Assert.AreEqual(new Tick(11), raised[0]);
+        }
+
+        [Test]
+        public void AnAdvanceThatMovesRaisesTickedOnceWithTheNewTick() {
+            var source = new SetTickSource(TickRate.PerSecond(20), new Tick(7));
+            var clock = new TickClock(source, ObservationContext.Discard);
+            var raised = new Tick[1];
+            var calls = 0;
+            var currentWhenRaised = new Tick(0);
+            clock.Ticked += tick => {
+                raised[0] = tick;
+                currentWhenRaised = clock.Current;
+                calls++;
+            };
+            source.Next = new Tick(9);
+
+            Assert.IsTrue(clock.Advance());
+
+            Assert.AreEqual(1, calls);
+            Assert.AreEqual(new Tick(9), raised[0]);
+            Assert.AreEqual(new Tick(9), currentWhenRaised);
+        }
+
+        [Test]
+        public void AnAdvanceOnASourceThatDidNotMoveRaisesNoTicked() {
+            var source = new SetTickSource(TickRate.PerSecond(20), new Tick(7));
+            var clock = new TickClock(source, ObservationContext.Discard);
+            var calls = 0;
+            clock.Ticked += _ => calls++;
+
+            Assert.IsFalse(clock.Advance());
+            source.Next = new Tick(4);
+            Assert.IsFalse(clock.Advance());
+
+            Assert.AreEqual(0, calls);
+        }
+
+        [Test]
+        public void RaiseSteppedRaisesNoTicked() {
+            var source = new SetTickSource(TickRate.PerSecond(20), new Tick(7));
+            var clock = new TickClock(source, ObservationContext.Discard);
+            source.Next = new Tick(11);
+            clock.Advance();
+            var calls = 0;
+            clock.Ticked += _ => calls++;
+
+            clock.RaiseStepped();
+            clock.RaiseStepped();
+
+            Assert.AreEqual(0, calls);
         }
 
         [Test]

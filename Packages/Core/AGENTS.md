@@ -84,8 +84,8 @@ Bridges, each compiled only when its package is installed:
 - `Spellbound.Core.Pipeline` when `com.unity.pipeline` is in [0.10.0-exp.1,0.11.0-exp.1)
 <!-- /spellbound:depends -->
 
-<!-- spellbound:pipeline 85aca405 -->
-Agents run these operation lines from the Unity command line when `com.unity.pipeline` is installed in [0.8.0-exp.1,0.9.0-exp.1) or [0.9.0-exp.1,0.10.0-exp.1) or [0.10.0-exp.1,0.11.0-exp.1): find the command with `unity command --query spellbound` and pass it one line.
+<!-- spellbound:pipeline 433e4b11 -->
+Agents run these operation lines from the Unity command line when `com.unity.pipeline` is installed in [0.0.0,1.0.0): find the command with `unity command --query spellbound` and pass it one line. The ranges Core's Pipeline bridge accepts are in Core's AGENTS.md.
 <!-- /spellbound:pipeline -->
 
 <!-- spellbound:samples 333d9287 -->
