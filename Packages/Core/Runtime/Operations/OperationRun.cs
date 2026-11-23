@@ -20,7 +20,7 @@ namespace Spellbound.Core.Operations {
 
         public event Action<string> Reported;
 
-        internal OperationRun() { }
+        public OperationRun() { }
 
         public static OperationRun Completed(OperationResult result) {
             var run = new OperationRun();
@@ -37,7 +37,7 @@ namespace Spellbound.Core.Operations {
             return _completion.Task;
         }
 
-        internal void Report(string line) {
+        public void Report(string line) {
             if (line == null) {
                 return;
             }
@@ -52,7 +52,7 @@ namespace Spellbound.Core.Operations {
             }
         }
 
-        internal void Complete(OperationResult result) {
+        public void Complete(OperationResult result) {
             if (IsDone) {
                 throw new InvalidOperationException("The operation run has already completed.");
             }
@@ -65,7 +65,7 @@ namespace Spellbound.Core.Operations {
             whenDone?.Invoke(Result);
         }
 
-        internal void WhenDone(Action<OperationResult> continuation) {
+        public void WhenDone(Action<OperationResult> continuation) {
             if (IsDone) {
                 continuation(Result);
                 return;
