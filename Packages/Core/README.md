@@ -518,3 +518,7 @@ For questions, issues, or feature requests, please contact Spellbound Studio or 
 ## License
 
 Copyright 2025 Spellbound Studio Inc.
+
+## Rules
+
+The binding rules are the rulebook at https://github.com/Spellbound-Studios/Roadmap/blob/main/Rulebook.md

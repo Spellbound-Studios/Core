@@ -5,7 +5,7 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
 git config core.hooksPath .githooks
-echo "Commit message hook enabled from .githooks"
+echo "Git LFS hooks enabled from .githooks"
 
 editor_version="$(grep '^m_EditorVersion:' ProjectSettings/ProjectVersion.txt | head -n 1 | sed 's/^m_EditorVersion:[[:space:]]*//' | tr -d '\r')"
 echo "This project needs Unity editor $editor_version"

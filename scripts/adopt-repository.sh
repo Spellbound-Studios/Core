@@ -11,6 +11,8 @@ lower="$(printf '%s' "$name" | tr 'A-Z' 'a-z')"
 template="$(cd "$(dirname "$0")/.." && pwd)"
 project="$PWD"
 
+source "$template/scripts/pull-request-base.sh"
+
 fail() {
     echo "$1" >&2
     exit 2
@@ -35,10 +37,10 @@ mv "Assets/$name" "Packages/$name"
 rm -f "Assets/$name.meta"
 echo "Moved Assets/$name to Packages/$name"
 
-for file in .gitignore .gitattributes; do
+for file in .gitignore .gitattributes .editorconfig; do
     rm -f "Packages/$name/$file" "Packages/$name/$file.meta"
 done
-echo "Removed the package copies of .gitignore and .gitattributes"
+echo "Removed the package copies of .gitignore, .gitattributes and .editorconfig"
 
 mkdir -p Assets/_Project
 rm -rf Assets/TutorialInfo Assets/TutorialInfo.meta Assets/Readme.asset Assets/Readme.asset.meta
@@ -88,9 +90,12 @@ copy_missing "$template/.editorconfig" .editorconfig
 if [ ! -e .releaserc.yaml ]; then
     sed "s|PackageName|$name|g" "$template/.releaserc.yaml" > .releaserc.yaml
 fi
-for file in CODEOWNERS AGENTS.md line-text-address.txt managed-files.txt managed-unity-packages.txt skeleton-version.txt; do
+for file in CODEOWNERS AGENTS.md rulebook-address.txt managed-files.txt managed-unity-packages.txt; do
     copy_missing "$template/$file" "$file"
 done
+if [ ! -e skeleton-version.txt ]; then
+    printf 'none\n' > skeleton-version.txt
+fi
 for folder in .githooks scripts; do
     mkdir -p "$folder"
     cp -R "$template/$folder/." "$folder/"
@@ -100,7 +105,7 @@ echo "Copied the managed files from the template"
 echo "Not copied: .github/workflows, because the shared workflows they call do not exist yet; sync-template.sh adds them when they do"
 
 git config core.hooksPath .githooks
-echo "Enabled the commit message hook"
+echo "Enabled the Git LFS hooks"
 
 git add -A
 renames="$(git diff --cached --name-status | grep -c '^R' || true)"
@@ -113,18 +118,17 @@ if git diff --cached --name-only | grep -Eq '^(Library|Temp|Logs|obj|UserSetting
     exit 1
 fi
 
-line_text="$(tr -d '\r\n' < line-text-address.txt)"
+rulebook="$(tr -d '\r\n' < rulebook-address.txt)"
 title="build($lower)!: move the package to Packages/$name"
-body="The repository root is now the dev project and the package is an embedded package at Packages/$name. Consumers install it with ?path=/Packages/$name. The line text: $line_text"
+body="The repository root is now the dev project and the package is an embedded package at Packages/$name. Consumers install it with ?path=/Packages/$name. The rulebook: $rulebook"
 
 git commit -q -m "$title" -m "$body"
 echo "Committed on layout/packages-folder"
 
-default_branch="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||' || true)"
-[ -n "$default_branch" ] || default_branch="main"
+base="$(pull_request_base)"
 
 echo "Next steps:"
 echo "git push -u origin layout/packages-folder"
-echo "gh pr create --base $default_branch --title \"$title\" --body \"$body\""
+echo "gh pr create --base $base --title \"$title\" --body \"$body\""
 echo "After the pull request merges, every consumer takes this manifest line:"
-echo "\"com.spellboundstudios.$lower\": \"https://github.com/Spellbound-Studios/$name.git?path=/Packages/$name#$default_branch\""
+echo "\"com.spellboundstudios.$lower\": \"https://github.com/Spellbound-Studios/$name.git?path=/Packages/$name#beta\""

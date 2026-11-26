@@ -339,6 +339,8 @@ ij_typescript_while_on_new_line = false
 ij_typescript_wrap_comments = false
 
 [{*.bash,*.sh,*.zsh}]
+charset = utf-8
+end_of_line = lf
 indent_size = 2
 tab_width = 2
 ij_shell_binary_ops_start_line = false
