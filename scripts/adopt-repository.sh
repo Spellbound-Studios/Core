@@ -126,9 +126,10 @@ git commit -q -m "$title" -m "$body"
 echo "Committed on layout/packages-folder"
 
 base="$(pull_request_base)"
+own_repository="$(pull_request_repository Spellbound-Studios)"
 
 echo "Next steps:"
 echo "git push -u origin layout/packages-folder"
-echo "gh pr create --base $base --title \"$title\" --body \"$body\""
+echo "gh pr create --base $base --repo $own_repository --title \"$title\" --body \"$body\""
 echo "After the pull request merges, every consumer takes this manifest line:"
 echo "\"com.spellboundstudios.$lower\": \"https://github.com/Spellbound-Studios/$name.git?path=/Packages/$name#beta\""
