@@ -1,3 +1,9 @@
+## [2.0.0-beta.3] - 2026-11-27
+
+### Fixes
+
+* **core:** the package passes the structure check and reads as a package ([#288](https://github.com/Spellbound-Studios/Core/issues/288)) ([e8fc4c7](https://github.com/Spellbound-Studios/Core/commit/e8fc4c77dfadb1d4d5067148029b44cbd885d111))
+
 ## [Unreleased]
 
 ### Fixes
