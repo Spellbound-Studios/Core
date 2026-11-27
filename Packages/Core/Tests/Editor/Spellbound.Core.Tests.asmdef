@@ -5,7 +5,7 @@
         "Spellbound.Core",
         "Spellbound.Core.Console",
         "Spellbound.Core.Editor",
-        "Spellbound.Fixture.Other",
+        "Spellbound.Core.Tests.BridgeDoorFixture",
         "Spellbound.Core.Tests.OperationFixture",
         "Spellbound.Core.Tests.OperationFixture.Second",
         "Spellbound.Core.Tests.PlaySessionFixture",

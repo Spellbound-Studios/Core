@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-RULES=(I2 I4 I5 I8 D5 D6 C13 P2 V1 V2 V6 A3 S1)
+RULES=(I2 I4 I5 I8 D5 D6 C13 P2 V1 V2 V6 V7 V8 V9 V10 A3 S1)
 TEMPLATE_CHECKS=(organisation studio-package version rulebook-pointer line-endings)
 
 NAME_PREFIX="${NAME_PREFIX-Spellbound.}"
@@ -10,8 +10,15 @@ FLOOR="${FLOOR-6000.3}"
 ORGANISATION="${ORGANISATION-Spellbound-Studios}"
 OLD_ORGANISATION="${OLD_ORGANISATION-Spell-Bound-Studios}"
 STUDIO_PACKAGE_PATTERN="${STUDIO_PACKAGE_PATTERN-Packages/Studio*}"
+STUDIO_REPOSITORY="${STUDIO_REPOSITORY-Studio}"
 RULEBOOK_ADDRESS="${RULEBOOK_ADDRESS-https://github.com/Spellbound-Studios/Roadmap/blob/main/Rulebook.md}"
 FOUNDATION_PACKAGE="${FOUNDATION_PACKAGE-com.spellboundstudios.core}"
+FRONT_DOOR_SUFFIX="${FRONT_DOOR_SUFFIX-Kit}"
+COPYRIGHT_HOLDER="${COPYRIGHT_HOLDER-Spellbound Studio Inc.}"
+OPEN_LICENSE_IDENTIFIER="${OPEN_LICENSE_IDENTIFIER-MIT}"
+OPEN_LICENSE_SENTENCE="${OPEN_LICENSE_SENTENCE-Permission is hereby granted, free of charge}"
+STORE_LICENSE_SENTENCE="${STORE_LICENSE_SENTENCE-Standard Unity Asset Store End User License Agreement}"
+STORE_LICENSE_FIELD="${STORE_LICENSE_FIELD-Refer to LICENSE.md file}"
 FOUNDATION_APPDOMAIN_TYPES="${FOUNDATION_APPDOMAIN_TYPES-Spellbound.Core.Tooling.AssemblyScanning \
 Spellbound.Core.Logging.FileSink}"
 MAINTAINER_FILES="${MAINTAINER_FILES-CLAUDE.md claude.md .claude}"
@@ -713,6 +720,135 @@ rule_V6() {
     fi
 }
 
+agents_front_door() {
+    [ -f "$package_folder/AGENTS.md" ] || return 0
+    awk "$COMMON_AWK"'
+        { text = plain($0); line_end = text; sub(/[ \t]+$/, "", line_end) }
+        collecting && substr(text, 1, 3) == "## " { exit }
+        collecting { section = section text "\n"; next }
+        line_end == "## Front door" { collecting = 1 }
+        END {
+            start = index(section, "`")
+            if (start == 0) exit
+            rest = substr(section, start + 1)
+            finish = index(rest, "`")
+            door = substr(rest, 1, finish - 1)
+            sub(/^[ \t\n]+/, "", door)
+            sub(/[.( \t\n].*$/, "", door)
+            if (finish > 0 && door != "") print door
+        }' "$package_folder/AGENTS.md"
+}
+
+rule_V7() {
+    local readme="$package_folder/README.md" address="" door
+    if [ ! -f "$readme" ]; then
+        echo "failed: V7 $package_path/README.md The package has no README.md."
+        return 0
+    fi
+    [ -n "$ORGANISATION" ] && address="https://github.com/$ORGANISATION/"
+    door="$(agents_front_door)"
+    [ -n "$door" ] || door="${package_name//./}$FRONT_DOOR_SUFFIX"
+    awk -v rule=V7 -v package="$package_path" -v address="$address" -v marker="?path=/Packages/$package_name#v" \
+        -v door="$door" "$COMMON_AWK"'
+        {
+            text = plain($0); line_end = text; sub(/[ \t]+$/, "", line_end)
+            if (FNR == 1 && text ~ /^#[ \t]+[^ \t]/) { titled = 1; next }
+            if (substr(text, 1, 3) == "## ") {
+                sections = 1
+                section = ""
+                if (!(line_end in heading)) { heading[line_end] = FNR; section = line_end }
+                next
+            }
+            if (!sections) {
+                if (FNR > 1 && trim(text) != "" && substr(trim(text), 1, 1) != "#") described = 1
+                next
+            }
+            if (section == "## Install") {
+                start = address == "" ? 1 : index(text, address)
+                if (start > 0 && index(substr(text, start), marker)) installed = 1
+            }
+            if (section == "## Front door" && index(text, door)) door_named = 1
+        }
+        END {
+            readme = package "/README.md"
+            if (!titled) fail(readme ":1", "The first line of README.md is not a # heading.")
+            if (!described) fail(readme, "README.md has no sentence between its title and its first section.")
+            if (!("## Install" in heading)) fail(readme, "README.md has no Install section.")
+            else if (!installed) fail(at(readme, heading["## Install"]), "The Install section names no address " \
+                (address == "" ? "" : "under " address " ") "holding " marker ".")
+            if (!("## Front door" in heading)) fail(readme, "README.md has no Front door section.")
+            else if (!door_named) fail(at(readme, heading["## Front door"]), "The Front door section does not name " \
+                door ".")
+            if (!("## Rules" in heading)) fail(readme, "README.md has no Rules section.")
+        }' "$readme"
+}
+
+rule_V8() {
+    local licence="$package_folder/LICENSE.md" kind="store" sentence="$STORE_LICENSE_SENTENCE"
+    local expected="$STORE_LICENSE_FIELD" license line
+    if [ -n "$FOUNDATION_PACKAGE" ] && [ "$package_id" = "$FOUNDATION_PACKAGE" ]; then
+        kind="open"
+        sentence="$OPEN_LICENSE_SENTENCE"
+        expected="$OPEN_LICENSE_IDENTIFIER"
+    fi
+    if [ ! -f "$licence" ]; then
+        echo "failed: V8 $package_path/LICENSE.md The package has no LICENSE.md."
+    else
+        awk -v rule=V8 -v package="$package_path" -v holder="$COPYRIGHT_HOLDER" -v sentence="$sentence" \
+            -v kind="$kind" "$COMMON_AWK"'
+            {
+                text = plain($0)
+                if (index(text, "Copyright") && (holder == "" || index(text, holder))) copyright = 1
+                if (sentence != "" && index(text, sentence)) held = 1
+            }
+            END {
+                licence = package "/LICENSE.md"
+                if (!copyright)
+                    fail(licence, "LICENSE.md has no Copyright line" (holder == "" ? "" : " naming " holder) ".")
+                if (sentence != "" && !held) fail(licence, "LICENSE.md does not hold the " kind " licence: \047" \
+                    sentence "\047.")
+            }' "$licence"
+    fi
+    [ -n "$expected" ] || return 0
+    if ! awk -F '\t' '$1 == "s" && $2 == "/license" { found = 1 } END { exit !found }' "$work/manifest.fields"; then
+        echo "failed: V8 $package_path/package.json package.json names no license; it should be '$expected'."
+        return 0
+    fi
+    license="$(field "$work/manifest.fields" /license)"
+    line="$(field_line "$work/manifest.fields" /license)"
+    [ "$license" = "$expected" ] || echo "failed: V8 $package_path/package.json:$line The license '$license'" \
+        "should be '$expected'."
+}
+
+first_package() {
+    [ "$manifest" = "${manifests%%$'\n'*}" ]
+}
+
+rule_V9() {
+    first_package || return 0
+    if [ ! -f "$root/CONTRIBUTING.md" ]; then
+        echo "failed: V9 CONTRIBUTING.md The repository has no CONTRIBUTING.md at its root."
+        return 0
+    fi
+    [ -z "$RULEBOOK_ADDRESS" ] || grep -qF -- "$RULEBOOK_ADDRESS" "$root/CONTRIBUTING.md" \
+        || echo "failed: V9 CONTRIBUTING.md CONTRIBUTING.md does not point at the rulebook $RULEBOOK_ADDRESS."
+}
+
+rule_V10() {
+    first_package || return 0
+    if [ ! -f "$root/SECURITY.md" ]; then
+        echo "failed: V10 SECURITY.md The repository has no SECURITY.md at its root."
+        return 0
+    fi
+    awk -v rule=V10 "$COMMON_AWK"'
+        {
+            text = plain($0)
+            if (substr(text, 1, 1) == "#" && index(tolower(text), "reporting a vulnerability")) found = 1
+        }
+        END { if (!found) fail("SECURITY.md", "SECURITY.md has no heading that says Reporting a vulnerability.") }' \
+        "$root/SECURITY.md"
+}
+
 rule_A3() {
     local agents="$package_folder/AGENTS.md"
     if [ ! -f "$agents" ]; then
@@ -819,6 +955,11 @@ check_organisation() {
 
 check_studio_package() {
     [ -n "$STUDIO_PACKAGE_PATTERN" ] || return 0
+    if [ -n "$STUDIO_REPOSITORY" ]; then
+        case "$(git remote get-url origin 2>/dev/null)" in
+            */"$STUDIO_REPOSITORY" | */"$STUDIO_REPOSITORY".git) return 0 ;;
+        esac
+    fi
     local folder
     for folder in $STUDIO_PACKAGE_PATTERN; do
         [ -d "$folder" ] || continue

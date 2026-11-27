@@ -125,8 +125,6 @@ The binding rules are the rulebook at https://github.com/Spellbound-Studios/Road
 - A line captured from Unity's own log (`UnityLogCapture`) reaches `CallSiteLogSink` with the source `Unity`, the log type as its member and line 0, so every `Debug.Log` from anywhere counts under one call site per log type.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
 - The Spellbound window holds no page of Core's own yet: the Line, Package, Operations and Drafts pages are not built.
-- The structure check's I5 rule fails on the test fixture assembly under `Tests/Editor/BridgeDoorFixture`: "The assembly 'Spellbound.Fixture.Other' is not named Spellbound.Core or under it." for `Spellbound.Fixture.Other.asmdef`, and "The namespace 'Spellbound.Fixture.Other' is not Spellbound.Core or under it." for `FixtureOtherKit.cs` and `FixtureOtherPart.cs`.
-- The structure check's D5 rule fails on `Editor/Spellbound.Core.Editor.asmdef`: "'Spellbound.Core.Editor' references 'GUID:c14a5db03514b8d4ba10b621ed3627d5' by GUID."
 
 ## Ledger
 

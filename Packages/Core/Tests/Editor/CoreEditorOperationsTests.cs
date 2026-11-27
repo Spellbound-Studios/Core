@@ -64,7 +64,7 @@ namespace Spellbound.Core.Tests {
             StringAssert.Contains("AGENTS.md\n", text);
             StringAssert.Contains("- `fixture echo --text <text>`", GeneratedBlock.Body(text, AgentContextBlocks.OperationsBlock));
             Assert.IsNull(GeneratedBlock.Body(text, AgentContextBlocks.DoorsBlock));
-            StringAssert.DoesNotContain("FixtureOtherKit", text);
+            StringAssert.DoesNotContain("CoreTestsKit", text);
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace Spellbound.Core.Tests {
         [Test]
         public void RefreshAddsTheDoorsBlockAfterTheOperationsBlock() {
             var group = _host.Catalog.Group("fixture");
-            var doors = BridgeDoors.Find(new[] { typeof(Spellbound.Fixture.Other.FixtureOtherKit).Assembly });
+            var doors = BridgeDoors.Find(new[] { typeof(Spellbound.Core.Tests.BridgeDoorFixture.CoreTestsKit).Assembly });
             var text = CoreEditorOperations.Refresh("## Front door\n\n`FixtureKit`\n\n## Rules\n\nr\n", group, null, doors);
             Assert.IsTrue(GeneratedBlock.IsCurrent(text, AgentContextBlocks.OperationsBlock));
             Assert.IsTrue(GeneratedBlock.IsCurrent(text, AgentContextBlocks.DoorsBlock));

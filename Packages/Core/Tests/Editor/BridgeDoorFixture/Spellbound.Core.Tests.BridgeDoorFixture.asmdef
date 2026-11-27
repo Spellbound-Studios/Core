@@ -1,5 +1,5 @@
 {
-    "name": "Spellbound.Fixture.Other",
+    "name": "Spellbound.Core.Tests.BridgeDoorFixture",
     "rootNamespace": "",
     "references": [
         "Spellbound.Core"

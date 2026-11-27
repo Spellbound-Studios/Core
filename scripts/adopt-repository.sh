@@ -90,7 +90,8 @@ copy_missing "$template/.editorconfig" .editorconfig
 if [ ! -e .releaserc.yaml ]; then
     sed "s|PackageName|$name|g" "$template/.releaserc.yaml" > .releaserc.yaml
 fi
-for file in CODEOWNERS AGENTS.md rulebook-address.txt managed-files.txt managed-unity-packages.txt; do
+for file in CODEOWNERS AGENTS.md CONTRIBUTING.md SECURITY.md rulebook-address.txt managed-files.txt \
+    managed-unity-packages.txt; do
     copy_missing "$template/$file" "$file"
 done
 if [ ! -e skeleton-version.txt ]; then

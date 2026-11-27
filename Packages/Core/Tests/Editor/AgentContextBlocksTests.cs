@@ -4,7 +4,7 @@ using System.Reflection;
 using NUnit.Framework;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Tests.OperationFixture;
-using Spellbound.Fixture.Other;
+using Spellbound.Core.Tests.BridgeDoorFixture;
 
 namespace Spellbound.Core.Tests {
     public class AgentContextBlocksTests {
@@ -42,9 +42,9 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void DoorsBlockListsEachDoorWithItsMembers() {
-            var doors = BridgeDoors.Find(new[] { typeof(FixtureOtherKit).Assembly });
+            var doors = BridgeDoors.Find(new[] { typeof(CoreTestsKit).Assembly });
             var block = AgentContextBlocks.Doors(doors);
-            StringAssert.Contains("\n- `FixtureOtherKit` in `Spellbound.Fixture.Other`", block);
+            StringAssert.Contains("\n- `CoreTestsKit` in `Spellbound.Core.Tests.BridgeDoorFixture`", block);
             StringAssert.Contains("\n  - `static List<string> Names(string prefix, int count = 3)`", block);
             Assert.AreEqual("Bridge doors in this project, the constructors of the types a bridge assembly adds:\n- none", AgentContextBlocks.Doors(null));
         }

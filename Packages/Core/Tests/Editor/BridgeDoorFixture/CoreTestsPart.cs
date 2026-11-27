@@ -1,10 +1,10 @@
 // Copyright (c) Spellbound Studios. All rights reserved.
 
-namespace Spellbound.Fixture.Other {
-    public sealed class FixtureOtherPart {
+namespace Spellbound.Core.Tests.BridgeDoorFixture {
+    public sealed class CoreTestsPart {
         public float Size { get; }
 
-        public FixtureOtherPart(float size) {
+        public CoreTestsPart(float size) {
             Size = size;
         }
     }
