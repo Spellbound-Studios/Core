@@ -149,7 +149,8 @@ fi
 if [ -n "$dropped" ]; then
     body="$body. Removed because the template no longer manages them: $(printf '%s' "$dropped" | paste -sd ' ' -)"
 fi
+own_repository="$(pull_request_repository "${template%%/*}")"
 git commit -q -m "$title" -m "$body"
 git push -u origin "$branch"
-gh pr create --base "$base" --title "$title" --body "$body"
+gh pr create --base "$base" --repo "$own_repository" --title "$title" --body "$body"
 [ -z "$renormalise" ] || echo "$renormalise"
