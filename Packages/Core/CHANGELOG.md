@@ -1,3 +1,40 @@
+## [2.0.0-beta.1] - 2026-11-27
+
+### ⚠ BREAKING CHANGES
+
+* **core:** WorldObjects leaves Core, the viewer registry, organisation and floor (L3, step 19) (#233)
+* **core:** move the package to Packages/Core
+* **core:** draw Core as Spellbound.Core, Spellbound.Core.WorldObjects and Spellbound.Core.Console
+
+* **core:** draw Core as Spellbound.Core, Spellbound.Core.WorldObjects and Spellbound.Core.Console ([23509f1](https://github.com/Spellbound-Studios/Core/commit/23509f1f901bb6363207552a7d06f4c7b8665f4b))
+* **core:** move the package to Packages/Core ([a29c347](https://github.com/Spellbound-Studios/Core/commit/a29c34737c8d63ed3d573c3a9bbe4bd63a2887e9))
+
+### Features
+
+* **core:** assembly listing behind a Unity define, play mode twice without reload (UN8-2, UN8-5, step 16) ([#248](https://github.com/Spellbound-Studios/Core/issues/248)) ([ba640f6](https://github.com/Spellbound-Studios/Core/commit/ba640f603c0eb8acf479eeb570a027d568b11c7f))
+* **core:** caller-owned and pooled packing, decode limits, the bit writer and the pure delta (PK, step 20) ([#179](https://github.com/Spellbound-Studios/Core/issues/179)) ([61f9b66](https://github.com/Spellbound-Studios/Core/commit/61f9b6655b929f17dc12f4d02999f52166a7c870))
+* **core:** Core adopts the bar, fixture groups unlisted, dry runs write nothing (L3c-1, step 19) ([#234](https://github.com/Spellbound-Studios/Core/issues/234)) ([0f3d4ec](https://github.com/Spellbound-Studios/Core/commit/0f3d4eca9bdf335b76049f8fcf6bbd5370819d2e))
+* **core:** operation replay, the target marker, the router seam and TickClock.Ticked ([#253](https://github.com/Spellbound-Studios/Core/issues/253)) ([1325cd2](https://github.com/Spellbound-Studios/Core/commit/1325cd2dca7c0d5831a6d7d1273efd13186f8f50))
+* **core:** OperationRun can be created and completed outside Core ([#254](https://github.com/Spellbound-Studios/Core/issues/254)) ([5bd62b7](https://github.com/Spellbound-Studios/Core/commit/5bd62b75993ea223193984373519d2e552fb33ce))
+* **core:** operations in Core, the reflection check first (CL1 stories 1 to 10) ([e944426](https://github.com/Spellbound-Studios/Core/commit/e944426d686463b509c03eaff81f84701275ce8a))
+* **core:** section attribute, ground vocabulary, reference frame noun and the packing layout description ([1abdead](https://github.com/Spellbound-Studios/Core/commit/1abdead8d21992e1798060cd29ea990cae71a9d1))
+* **core:** the agent route: the Pipeline bridge, spellbound_run and the shipped agent context (CL2, CL5) ([#116](https://github.com/Spellbound-Studios/Core/issues/116)) ([79b072c](https://github.com/Spellbound-Studios/Core/commit/79b072c143371b414abf1f15cf9f468e64917fd9))
+* **core:** the authored-key scan, revise and the banner path (CL4b, step 33) ([#218](https://github.com/Spellbound-Studios/Core/issues/218)) ([8b5fb4c](https://github.com/Spellbound-Studios/Core/commit/8b5fb4c34f4f8ebb1c5b245e4becc9169a54fd1d))
+* **core:** the authoring contract, the check seam, drafts and approve (CL4 stories 1 to 9) ([#126](https://github.com/Spellbound-Studios/Core/issues/126)) ([92ba4ed](https://github.com/Spellbound-Studios/Core/commit/92ba4ed927e1abcdca4bf950206f94978d215bd6))
+* **core:** the generated operations block names its package without the version ([#150](https://github.com/Spellbound-Studios/Core/issues/150)) ([0b212b2](https://github.com/Spellbound-Studios/Core/commit/0b212b2425c8133036fe736f2d47d8fab21c6c1b))
+* **core:** the intent key, the actor, the sequence and the ledger (R1k, step 21) ([#187](https://github.com/Spellbound-Studios/Core/issues/187)) ([8b1cb0d](https://github.com/Spellbound-Studios/Core/commit/8b1cb0d5c852c681e0f84904e19881fcab0aedb2))
+* **core:** the look hook, header states and a page header and footer for the editor look (step 15.1) ([#165](https://github.com/Spellbound-Studios/Core/issues/165)) ([fc4d288](https://github.com/Spellbound-Studios/Core/commit/fc4d28887553ea552d5ec10aa6950a77c913d4b5))
+* **core:** the observation model and the per-world context, every reporting door takes it (R1a, step 17) ([#171](https://github.com/Spellbound-Studios/Core/issues/171)) ([70f6b4e](https://github.com/Spellbound-Studios/Core/commit/70f6b4e0655993d0581447c1179394f8907eaff4))
+* **core:** the package identity, the Spellbound window shell and two inspectors in UI Toolkit (LV2, UI7c) ([#149](https://github.com/Spellbound-Studios/Core/issues/149)) ([18e2120](https://github.com/Spellbound-Studios/Core/commit/18e21203a98744d00f8c809072d973a540e29bfb))
+* **core:** the review fixes of steps 13 and 14 (Core[#151](https://github.com/Spellbound-Studios/Core/issues/151) to [#155](https://github.com/Spellbound-Studios/Core/issues/155)) ([#158](https://github.com/Spellbound-Studios/Core/issues/158)) ([c90f77f](https://github.com/Spellbound-Studios/Core/commit/c90f77fd326be88ec492f74f1ca4eb1bfb63b141))
+* **core:** the simulation vocabulary, the editor controls and the Unity ledger (R0, UI7a, UN1a) ([#144](https://github.com/Spellbound-Studios/Core/issues/144)) ([9e7fc0c](https://github.com/Spellbound-Studios/Core/commit/9e7fc0cddf12bffed400d0312e5497ddcb44a257))
+* **core:** WorldObjects leaves Core, the viewer registry, organisation and floor (L3, step 19) ([#233](https://github.com/Spellbound-Studios/Core/issues/233)) ([ec06b16](https://github.com/Spellbound-Studios/Core/commit/ec06b16f9eb453c69bb9eb6f76dff984f42d28dd))
+* **observations:** guards, flight recorder, settings checks, native queue and measurements (R1b) ([#251](https://github.com/Spellbound-Studios/Core/issues/251)) ([0ea31e5](https://github.com/Spellbound-Studios/Core/commit/0ea31e5a60d712a023f09a0d1be9fdf6d9d824cc))
+
+### Fixes
+
+* **core:** the bridge under Pipeline 0.10 reports into a world, a dry run that cannot preview is refused (FX1) ([#225](https://github.com/Spellbound-Studios/Core/issues/225)) ([63265e2](https://github.com/Spellbound-Studios/Core/commit/63265e2d3adfabf369d256e11d6aa71f0c571e11))
+
 ## [Unreleased]
 
 - The world-object framework leaves Core for the WorldObjects package: the folder `Runtime/WorldObjects` and its assembly `Spellbound.Core.WorldObjects` are gone, with `ObjectPreset`, `PresetRegistry`, `ObjectParent`, `TransformData`, `DynamicInstanceEntry`, the module contracts and the Entities systems. `ObjectPresetEditor` and `ObjectPresetManifestPostprocessor` leave `Spellbound.Core.Editor`, and `Spellbound.Core.Tests` no longer references Unity.Entities or Unity.Transforms.
