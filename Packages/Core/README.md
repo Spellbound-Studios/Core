@@ -1,10 +1,20 @@
-# README
+# Spellbound.Core
 
-[Documentation](https://spell-bound-studios.gitbook.io/spellbound-docs/)
+Core gives every package one vocabulary: logging, packing bytes, identity, seeded random streams, ticks, reference frames, budgets, operations and validation of authored content.
 
-# Introduction
+## Install
 
----
+Add this line to `Packages/manifest.json`, replacing `<version>` with a release tag:
+
+```
+"com.spellboundstudios.core": "https://github.com/Spellbound-Studios/Core.git?path=/Packages/Core#v<version>"
+```
+
+The Spellbound window in Core installs it for you.
+
+## Front door
+
+`CoreKit` is the entry point to everything this package offers.
 
 ## Operations
 
@@ -42,13 +52,9 @@ Debug.Log(run.Result.Text);
 - A line run on the Unity command line records its observations, such as its group's `<group>.operations` cost, into the one live world; pass `--world <name>` to choose one when several are live, where it otherwise records nowhere. The command's `--world` chooses where the line records; an operation's own `--world` argument, such as `core observation`'s, stays inside the line. A `--world` that is not live is refused as `invalid:` with the live worlds listed.
 - Every package ships `AGENTS.md` at its root with the headings Purpose, Front door, Rules, Not for, Gaps and Ledger. `core context` lists the installed packages; `core context --package <group>` prints one package's file with its generated operation block refreshed; `core context-install --target Skill` (or `Agents`, `Claude`) writes the stub that tells an agent how to reach the packages; `core ledger` prints every package's Ledger rows.
 
----
-
 ## Viewers
 
 `Spellbound.Core.Viewers` holds the viewers a world wakes things around. A `ViewerRegistry` is made per world instance and holds nothing static; each `Viewer` carries its `ViewerId`, its position, its collision radius and its detail radius. `Add(position, collisionRadius, detailRadius)` issues ids from 1 in each registry and never reuses one; `Move(id, position)` and `Update(id, position, collisionRadius, detailRadius)` answer false for an unknown id, and `Remove(id)` answers false the second time. A radius below zero or not finite, or a position with a component that is not finite, throws `ArgumentOutOfRangeException`. `Viewers` is a span over the registry's packed array and reads without allocating; its order is not the order of adding, and a span taken before an `Add` or a `Remove` is no longer valid. `Read(list)` fills a caller-owned list. `Added`, `Moved` (raised by `Move` and by `Update`) and `Removed` each pass the viewer as `in Viewer`. A viewer crossing worlds is removed from one registry and then added to the other.
-
----
 
 ## Console Overview
 
@@ -60,14 +66,12 @@ commands:
 
 ### Key Features
 
-- ✅ Automatic command discovery via attributes
-- ✅ Type-safe parameter parsing (int, float, bool, Vector3, Vector2, enums, etc.)
-- ✅ Command aliases
-- ✅ Command history navigation (up/down arrows)
-- ✅ Extensible architecture
-- ✅ Clean separation of concerns
-
----
+- Automatic command discovery via attributes
+- Type-safe parameter parsing (int, float, bool, Vector3, Vector2, enums, etc.)
+- Command aliases
+- Command history navigation (up/down arrows)
+- Extensible architecture
+- Clean separation of concerns
 
 ## Quick Start
 
@@ -99,8 +103,6 @@ Open the console and try:
 > clear
 ```
 
----
-
 ## Command Types
 
 ### ICommand Classes
@@ -127,8 +129,6 @@ Best for: Static helper methods, debug utilities, system commands.
 - Must be static methods
 - Decorated with `[ConsoleUtilityCommand]`
 - Called directly: `commandname arg1 arg2`
-
----
 
 ## Creating Commands
 
@@ -230,8 +230,6 @@ public class TerraformHelpCommand : ICommand {
 }
 ```
 
----
-
 ## Architecture
 
 ### Core Components
@@ -270,8 +268,6 @@ AttributeCommandRegistry.ExecuteUtilityCommand("timescale", ["0.5"])
      ↓
 Returns success
 ```
-
----
 
 ## API Reference
 
@@ -315,8 +311,6 @@ var commands = AttributeCommandRegistry.GetUtilityCommandsByClassName("MyClass")
 // Check if utility command exists
 bool exists = AttributeCommandRegistry.HasUtilityCommand("mycommand");
 ```
-
----
 
 ## Advanced Usage
 
@@ -413,8 +407,6 @@ if (result.Success) {
 }
 ```
 
----
-
 ## Best Practices
 
 ### 1. Choose the Right Command Type
@@ -425,20 +417,20 @@ if (result.Success) {
 ### 2. Provide Good Descriptions
 
 ```csharp
-// ✅ Good
+// Good
 [ConsoleUtilityCommand("setfov", "Sets camera field of view (30-120)")]
 
-// ❌ Bad
+// Bad
 [ConsoleUtilityCommand("setfov", "Sets FOV")]
 ```
 
 ### 3. Use Default Parameters for Optional Args
 
 ```csharp
-// ✅ Good - allows: timescale  OR  timescale 0.5
+// Good - allows: timescale  OR  timescale 0.5
 public static void SetTimeScale(float scale = 1f)
 
-// ❌ Bad - always requires scale
+// Bad - always requires scale
 public static void SetTimeScale(float scale)
 ```
 
@@ -447,7 +439,7 @@ public static void SetTimeScale(float scale)
 ```csharp
 [ConsoleUtilityCommand("setvolume")]
 public static void SetVolume(float volume) {
-    volume = Mathf.Clamp01(volume);  // ✅ Clamp to valid range
+    volume = Mathf.Clamp01(volume);  // Clamp to valid range
     AudioListener.volume = volume;
 }
 ```
@@ -455,7 +447,7 @@ public static void SetVolume(float volume) {
 ### 5. Group Related Commands
 
 ```csharp
-// ✅ Good - all audio commands in one class
+// Good - all audio commands in one class
 public static class AudioCommands {
     [ConsoleUtilityCommand("volume")] public static void SetVolume(float v) { }
     [ConsoleUtilityCommand("mute")] public static void Mute() { }
@@ -466,7 +458,7 @@ public static class AudioCommands {
 ### 6. Create Help Commands for Command Groups
 
 ```csharp
-// ✅ Provide a way to discover related commands
+// Provide a way to discover related commands
 [ConsoleCommandClass("audio")]
 public class AudioHelpCommand : ICommand {
     public CommandResult Execute(string[] args) {
@@ -475,8 +467,6 @@ public class AudioHelpCommand : ICommand {
     }
 }
 ```
-
----
 
 ## Troubleshooting
 
@@ -502,22 +492,6 @@ public class AudioHelpCommand : ICommand {
 1. Check parameter types are supported
 2. Ensure correct number of arguments
 3. Use correct format for Vector3/Vector2 (space-separated)
-
----
-
-## Support
-
-For questions, issues, or feature requests, please contact Spellbound Studio or post in the Discord.
-
-**Version:** 1.0  
-**Unity Version:** 2021.3+  
-**Dependencies:** TextMeshPro, Unity Input System
-
----
-
-## License
-
-Copyright 2025 Spellbound Studio Inc.
 
 ## Rules
 

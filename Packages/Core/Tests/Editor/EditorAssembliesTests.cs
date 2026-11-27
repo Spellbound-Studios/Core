@@ -4,7 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using Spellbound.Core.Operations;
 using Spellbound.Core.Operations.Editor;
-using Spellbound.Fixture.Other;
+using Spellbound.Core.Tests.BridgeDoorFixture;
 
 namespace Spellbound.Core.Tests {
     public class EditorAssembliesTests {
@@ -27,7 +27,7 @@ namespace Spellbound.Core.Tests {
 
         [Test]
         public void TheFixtureDoorAssemblyIsATestAssemblyAndCoreIsNot() {
-            Assert.IsTrue(EditorAssemblies.IsTestAssembly(typeof(FixtureOtherKit).Assembly.GetName().Name));
+            Assert.IsTrue(EditorAssemblies.IsTestAssembly(typeof(CoreTestsKit).Assembly.GetName().Name));
             Assert.IsFalse(EditorAssemblies.IsTestAssembly(typeof(CoreKit).Assembly.GetName().Name));
             Assert.IsFalse(EditorAssemblies.IsTestAssembly("Spellbound.Nowhere"));
             Assert.IsFalse(EditorAssemblies.IsTestAssembly(null));
@@ -37,9 +37,9 @@ namespace Spellbound.Core.Tests {
         public void TheDefaultDoorListingSkipsTestAssembliesAndAnExplicitListDoesNot() {
             Assert.IsNotNull(BridgeDoors.AssemblySource);
             CollectionAssert.DoesNotContain(EditorAssemblies.WithoutTests().Select(assembly => assembly.GetName().Name).ToList(),
-                typeof(FixtureOtherKit).Assembly.GetName().Name);
-            Assert.IsFalse(BridgeDoors.Find().Any(door => door.TypeName == nameof(FixtureOtherKit)));
-            Assert.IsTrue(BridgeDoors.Find(new[] { typeof(FixtureOtherKit).Assembly }).Any(door => door.TypeName == nameof(FixtureOtherKit)));
+                typeof(CoreTestsKit).Assembly.GetName().Name);
+            Assert.IsFalse(BridgeDoors.Find().Any(door => door.TypeName == nameof(CoreTestsKit)));
+            Assert.IsTrue(BridgeDoors.Find(new[] { typeof(CoreTestsKit).Assembly }).Any(door => door.TypeName == nameof(CoreTestsKit)));
         }
 
         [Test]
@@ -47,10 +47,10 @@ namespace Spellbound.Core.Tests {
             var previous = BridgeDoors.AssemblySource;
 
             try {
-                BridgeDoors.AssemblySource = () => new[] { typeof(FixtureOtherKit).Assembly };
-                Assert.IsTrue(BridgeDoors.Find().Any(door => door.TypeName == nameof(FixtureOtherKit)));
+                BridgeDoors.AssemblySource = () => new[] { typeof(CoreTestsKit).Assembly };
+                Assert.IsTrue(BridgeDoors.Find().Any(door => door.TypeName == nameof(CoreTestsKit)));
                 BridgeDoors.AssemblySource = null;
-                Assert.IsTrue(BridgeDoors.Find().Any(door => door.TypeName == nameof(FixtureOtherKit)));
+                Assert.IsTrue(BridgeDoors.Find().Any(door => door.TypeName == nameof(CoreTestsKit)));
             }
             finally {
                 BridgeDoors.AssemblySource = previous;

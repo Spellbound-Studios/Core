@@ -27,6 +27,8 @@ scripts/update-skeleton.sh
 .releaserc.yaml
 CODEOWNERS
 AGENTS.md
+CONTRIBUTING.md
+SECURITY.md
 rulebook-address.txt
 managed-files.txt
 managed-unity-packages.txt

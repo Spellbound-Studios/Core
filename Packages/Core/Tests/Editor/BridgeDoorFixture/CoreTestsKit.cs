@@ -2,8 +2,8 @@
 
 using System.Collections.Generic;
 
-namespace Spellbound.Fixture.Other {
-    public static class FixtureOtherKit {
+namespace Spellbound.Core.Tests.BridgeDoorFixture {
+    public static class CoreTestsKit {
         public static int Count { get; private set; }
 
         public static List<string> Names(string prefix, int count = 3) {
@@ -17,8 +17,8 @@ namespace Spellbound.Fixture.Other {
             return names;
         }
 
-        public static bool TryBuild(float size, out FixtureOtherPart part) {
-            part = new FixtureOtherPart(size);
+        public static bool TryBuild(float size, out CoreTestsPart part) {
+            part = new CoreTestsPart(size);
             return size > 0;
         }
     }

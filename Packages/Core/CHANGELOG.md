@@ -1,3 +1,11 @@
+## [Unreleased]
+
+### Fixes
+
+* **core:** the bridge door test fixture is named under Spellbound.Core ([#255](https://github.com/Spellbound-Studios/Core/issues/255))
+* **core:** the Editor assembly references Spellbound.Core by name ([#256](https://github.com/Spellbound-Studios/Core/issues/256))
+* **core:** the readme follows the package readme shape and package.json names the MIT licence
+
 ## [2.0.0-beta.2] - 2026-11-27
 
 ### Fixes

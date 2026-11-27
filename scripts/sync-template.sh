@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/pull-request-base.sh"
+if [ "${SYNC_TEMPLATE_RUNNING_COPY:-}" != "${BASH_SOURCE[0]}" ]; then
+    running_copy="$(mktemp)"
+    cp "${BASH_SOURCE[0]}" "$running_copy"
+    SYNC_TEMPLATE_RUNNING_COPY="$running_copy" \
+        SYNC_TEMPLATE_SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" \
+        exec "$BASH" "$running_copy" "$@"
+fi
+
+trap 'rm -f "$SYNC_TEMPLATE_RUNNING_COPY"' EXIT
+source "$SYNC_TEMPLATE_SCRIPTS_FOLDER/pull-request-base.sh"
 
 usage() {
     cat >&2 <<'TEXT'
@@ -70,7 +79,7 @@ fill_if() {
 }
 
 work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
+trap 'rm -rf "$work" "$SYNC_TEMPLATE_RUNNING_COPY"' EXIT
 
 managed="$(fetch managed-files.txt | tr -d '\r')"
 drifted=""
