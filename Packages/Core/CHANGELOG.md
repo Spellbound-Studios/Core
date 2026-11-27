@@ -1,3 +1,9 @@
+## [2.0.0-beta.2] - 2026-11-27
+
+### Fixes
+
+* **core:** the repository says how to report a vulnerability ([#287](https://github.com/Spellbound-Studios/Core/issues/287)) ([16b2733](https://github.com/Spellbound-Studios/Core/commit/16b273337e97a172049b8b12edfa9d09d6368377))
+
 ## [2.0.0-beta.1] - 2026-11-27
 
 ### ⚠ BREAKING CHANGES
