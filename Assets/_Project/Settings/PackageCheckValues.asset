@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0f44d5d6cb867c442a555643cdaeecc9, type: 3}
-  m_Name: SpellboundLine
+  m_Name: PackageCheckValues
   m_EditorClassIdentifier: Spellbound.PackageCheck.Editor::Spellbound.PackageCheck.PackageCheckValues
   namePrefix: Spellbound.
   identifierPrefix: com.spellboundstudios.
@@ -23,7 +23,7 @@ MonoBehaviour:
   - Spellbound.Core.Tooling.AssemblyScanning
   - Spellbound.Core.Logging.FileSink
   organisationAddress: https://github.com/Spellbound-Studios/
-  lineTextAddress: https://github.com/Spellbound-Studios/.github/tree/main/line
+  rulebookAddress: https://github.com/Spellbound-Studios/Roadmap/blob/main/Rulebook.md
   floorEditor: 6000.3
   ledgerFolder: Assets/_Project/Ledger
   scaffoldFolder: Assets/_Project
@@ -59,9 +59,12 @@ MonoBehaviour:
   - CLAUDE.md
   - claude.md
   - .claude
-  lineTextHeadings:
-  - Rules of the line
-  - The homes procedure
+  rulebookHeadings:
+  - Where things live
+  - People and states
+  - Kinds of work
+  - Checks before a merge
+  - The studio's packages
   layerOrder:
   - foundation
   - mechanism

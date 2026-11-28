@@ -124,7 +124,7 @@ The binding rules are the rulebook at https://github.com/Spellbound-Studios/Road
 - The flight recorder, guards with a policy, the native queue for jobs, the profiler mirror and the key validator's checks are not built yet; an occurrence only counts (its tick and subject are taken and not kept until the recorder exists), and a packed snapshot of a context's readings does not exist.
 - A line captured from Unity's own log (`UnityLogCapture`) reaches `CallSiteLogSink` with the source `Unity`, the log type as its member and line 0, so every `Debug.Log` from anywhere counts under one call site per log type.
 - The reference forms `world:3` and `player` are not bound yet; `scene:/Path` and `asset:` work.
-- The Spellbound window holds no page of Core's own yet: the Line, Package, Operations and Drafts pages are not built.
+- The Spellbound window holds no page of Core's own yet: the Studio rules, Package, Operations and Drafts pages are not built.
 
 ## Ledger
 
