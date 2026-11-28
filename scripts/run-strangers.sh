@@ -14,7 +14,7 @@ usage: bash scripts/run-strangers.sh <tag> | --commit <sha> [--root <folder>]
 Runs the stranger projects that install this repository's package against a candidate pushed to origin: a
 tag, or with --commit a commit at the head of a branch or tag. Every stranger's packages-lock.json must hold
 the candidate for the package. Finds the editor of the strangers' test bed by its process, or opens it
-headless and closes that one at the end, lists the strangers with packagecheck strangers, runs the line tier
+headless and closes that one at the end, lists the strangers with packagecheck strangers, runs the studio tier
 over each one in turn, polling each run until it finished or failed, then prints the table and the
 post-status.sh line to type for the strangers status. --root is the strangers folder, by default Strangers
 in the StrangersDev checkout beside this one. DRY_RUN set to anything but 0 prints the plan and runs
@@ -208,7 +208,7 @@ if [ "$dry_run" = "true" ]; then
     fi
     say "plan: packagecheck strangers --root \"$strangers_root_native\"," \
         "keep the projects whose manifest installs $package_id"
-    say "plan: for each of them in turn, packagecheck run-start --tier line --path \"$strangers_root_native/<name>\""
+    say "plan: for each of them in turn, packagecheck run-start --tier studio --path \"$strangers_root_native/<name>\""
     say "plan: packagecheck run-status --run <id> every $POLL_SECONDS s until finished or failed," \
         "at most $STRANGERS_TIMEOUT_SECONDS s, before the next"
     say "plan: print the table, then: bash scripts/post-status.sh --sha $candidate --state <success|failure>" \
@@ -307,7 +307,7 @@ rows="$WORK_FOLDER/strangers-rows.txt"
 
 run_stranger() {
     local name="$1" run_id stage="" result line deadline
-    operation "packagecheck run-start --tier line --path \"$strangers_root_native/$name\""
+    operation "packagecheck run-start --tier studio --path \"$strangers_root_native/$name\""
     if [ "$operation_word" != "succeeded" ]; then
         printf '%s\t%s\t%s\n' "$name" "$operation_word" "$(printf '%s\n' "$operation_text" | head -n 1)" >> "$rows"
         return
