@@ -1,3 +1,9 @@
+## [2.0.0-beta.4] - 2026-11-28
+
+### Fixes
+
+* **rules:** studio rules replaces the line ([#290](https://github.com/Spellbound-Studios/Core/issues/290)) ([f3597e3](https://github.com/Spellbound-Studios/Core/commit/f3597e3b04e27c3ace2541c5801bb10e402aabdb))
+
 ## [2.0.0-beta.3] - 2026-11-27
 
 ### Fixes
